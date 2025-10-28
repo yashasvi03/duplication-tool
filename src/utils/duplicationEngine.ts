@@ -360,6 +360,36 @@ function remapParameterReferences(
       return remappedRule;
     });
   }
+
+  // Remap validations array if present
+  if (parameter.validations && duplicationConfig.components.parameterValidations) {
+    parameter.validations = remapJsonField(
+      parameter.validations,
+      idMapping,
+      copyIndex,
+      duplicationConfig
+    );
+  }
+
+  // Remap data.propertyFilters if present
+  if (parameter.data?.propertyFilters && duplicationConfig.components.parameterValidations) {
+    parameter.data.propertyFilters = remapJsonField(
+      parameter.data.propertyFilters,
+      idMapping,
+      copyIndex,
+      duplicationConfig
+    );
+  }
+
+  // Remap data.propertyValidations if present
+  if (parameter.data?.propertyValidations && duplicationConfig.components.parameterValidations) {
+    parameter.data.propertyValidations = remapJsonField(
+      parameter.data.propertyValidations,
+      idMapping,
+      copyIndex,
+      duplicationConfig
+    );
+  }
 }
 
 /**

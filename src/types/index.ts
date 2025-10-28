@@ -100,6 +100,7 @@ export interface DuplicationConfig {
     automations: boolean;
     linkedParameters: boolean;
     parameterRules: boolean;
+    parameterValidations: boolean;
     schedules: boolean;
     media: boolean;
     recurrence: boolean;
