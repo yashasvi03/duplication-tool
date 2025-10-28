@@ -230,17 +230,13 @@ export function treeNodeToSelectedEntity(
     parent = node.parent.data as any;
   }
 
-  const entityType = node.type === 'checklist' ? 'stage' :
-                     node.type === 'stage' ? 'task' :
-                     node.type === 'task' ? 'parameter' : 'parameter';
-
   // Only stages, tasks, and parameters can be selected
   if (node.type === 'checklist') {
     return null;
   }
 
   return {
-    type: entityType as 'stage' | 'task' | 'parameter',
+    type: node.type as 'stage' | 'task' | 'parameter',
     id: node.id,
     data: node.data as Stage | Task,
     parent,
