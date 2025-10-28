@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Step1Upload from './steps/Step1Upload'
 import Step2Select from './steps/Step2Select'
 import Step3Configure from './steps/Step3Configure'
+import Step4Preview from './steps/Step4Preview'
 import { Button } from './components/ui/button'
 import type { ChecklistConfig, SelectedEntity, DuplicationConfig } from './types'
 
@@ -11,6 +12,7 @@ function App() {
   const [parsedConfig, setParsedConfig] = useState<ChecklistConfig[] | null>(null)
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null)
   const [duplicationConfig, setDuplicationConfig] = useState<DuplicationConfig | null>(null)
+  const [modifiedConfig, setModifiedConfig] = useState<ChecklistConfig[] | null>(null)
 
   const handleJsonLoaded = (json: string, parsed: ChecklistConfig[]) => {
     setInputJson(json)
@@ -25,10 +27,15 @@ function App() {
     setDuplicationConfig(config)
   }
 
+  const handlePreviewGenerated = (modified: ChecklistConfig[]) => {
+    setModifiedConfig(modified)
+  }
+
   const canProceed = () => {
     if (currentStep === 1) return inputJson !== null && parsedConfig !== null
     if (currentStep === 2) return selectedEntity !== null
     if (currentStep === 3) return duplicationConfig !== null
+    if (currentStep === 4) return modifiedConfig !== null
     return true
   }
 
@@ -115,7 +122,16 @@ function App() {
               />
             )}
 
-            {currentStep > 3 && (
+            {currentStep === 4 && parsedConfig && selectedEntity && duplicationConfig && (
+              <Step4Preview
+                config={parsedConfig}
+                selectedEntity={selectedEntity}
+                duplicationConfig={duplicationConfig}
+                onPreviewGenerated={handlePreviewGenerated}
+              />
+            )}
+
+            {currentStep > 4 && (
               <div className="text-center text-muted-foreground py-12">
                 Step {currentStep} component will be implemented next.
               </div>
