@@ -28,7 +28,7 @@ function App() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4">
-        <header className="mb-8">
+        <header className="mb-8" role="banner">
           <h1 className="text-3xl font-bold text-foreground">
             MES Duplication Tool
           </h1>
@@ -37,9 +37,9 @@ function App() {
           </p>
         </header>
 
-        <div className="bg-card rounded-lg shadow-lg p-6">
-          {/* Progress indicator will go here */}
-          <div className="mb-8">
+        <div className="bg-card rounded-lg shadow-lg p-6" role="main">
+          {/* Progress indicator */}
+          <nav aria-label="Progress" className="mb-8">
             <div className="flex items-center justify-between">
               {[1, 2, 3, 4, 5].map((step) => (
                 <div
@@ -56,6 +56,8 @@ function App() {
                         ? 'border-primary bg-primary text-primary-foreground'
                         : 'border-muted-foreground text-muted-foreground'
                     }`}
+                    aria-current={step === currentStep ? 'step' : undefined}
+                    aria-label={`Step ${step}${step === currentStep ? ' (current)' : step < currentStep ? ' (completed)' : ''}`}
                   >
                     {step}
                   </div>
@@ -79,8 +81,8 @@ function App() {
           </div>
 
           {/* Main content area */}
-          <div className="min-h-[400px]">
-            <h2 className="text-xl font-semibold mb-6">
+          <div className="min-h-[400px]" role="region" aria-label="Step content">
+            <h2 className="text-xl font-semibold mb-6" id="step-heading">
               Step {currentStep}: {
                 currentStep === 1 ? 'Upload JSON Configuration' :
                 currentStep === 2 ? 'Select Entity to Duplicate' :
@@ -130,21 +132,23 @@ function App() {
           </div>
 
           {/* Navigation buttons */}
-          <div className="flex justify-between mt-8">
+          <nav aria-label="Step navigation" className="flex justify-between mt-8">
             <Button
               onClick={previousStep}
               disabled={currentStep === 1}
               variant="outline"
+              aria-label={`Go to previous step${currentStep > 1 ? ` (Step ${currentStep - 1})` : ''}`}
             >
               ← Back
             </Button>
             <Button
               onClick={nextStep}
               disabled={currentStep === 5 || !canProceed()}
+              aria-label={`Go to next step${currentStep < 5 ? ` (Step ${currentStep + 1})` : ''}`}
             >
               Next →
             </Button>
-          </div>
+          </nav>
         </div>
       </div>
     </div>
