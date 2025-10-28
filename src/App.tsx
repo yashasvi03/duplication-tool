@@ -1,60 +1,29 @@
-import { useState } from 'react'
 import Step1Upload from './steps/Step1Upload'
 import Step2Select from './steps/Step2Select'
 import Step3Configure from './steps/Step3Configure'
 import Step4Preview from './steps/Step4Preview'
 import Step5Execute from './steps/Step5Execute'
 import { Button } from './components/ui/button'
-import type { ChecklistConfig, SelectedEntity, DuplicationConfig } from './types'
+import { useAppContext } from './contexts/AppContext'
 
 function App() {
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1)
-  const [inputJson, setInputJson] = useState<string | null>(null)
-  const [parsedConfig, setParsedConfig] = useState<ChecklistConfig[] | null>(null)
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null)
-  const [duplicationConfig, setDuplicationConfig] = useState<DuplicationConfig | null>(null)
-  const [modifiedConfig, setModifiedConfig] = useState<ChecklistConfig[] | null>(null)
-
-  const handleJsonLoaded = (json: string, parsed: ChecklistConfig[]) => {
-    setInputJson(json)
-    setParsedConfig(parsed)
-  }
-
-  const handleEntitySelected = (entity: SelectedEntity) => {
-    setSelectedEntity(entity)
-  }
-
-  const handleConfigUpdated = (config: DuplicationConfig) => {
-    setDuplicationConfig(config)
-  }
-
-  const handlePreviewGenerated = (modified: ChecklistConfig[]) => {
-    setModifiedConfig(modified)
-  }
-
-  const handleStartOver = () => {
-    setCurrentStep(1)
-    setInputJson(null)
-    setParsedConfig(null)
-    setSelectedEntity(null)
-    setDuplicationConfig(null)
-    setModifiedConfig(null)
-  }
-
-  const handleDuplicateMore = () => {
-    setCurrentStep(2)
-    setSelectedEntity(null)
-    setDuplicationConfig(null)
-    setModifiedConfig(null)
-  }
-
-  const canProceed = () => {
-    if (currentStep === 1) return inputJson !== null && parsedConfig !== null
-    if (currentStep === 2) return selectedEntity !== null
-    if (currentStep === 3) return duplicationConfig !== null
-    if (currentStep === 4) return modifiedConfig !== null
-    return true
-  }
+  // Use context for all state and actions
+  const {
+    currentStep,
+    parsedConfig,
+    selectedEntity,
+    duplicationConfig,
+    modifiedConfig,
+    nextStep,
+    previousStep,
+    canProceed,
+    setJsonLoaded,
+    setEntitySelected,
+    setConfigUpdated,
+    setPreviewGenerated,
+    startOver,
+    duplicateMore,
+  } = useAppContext()
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,20 +91,20 @@ function App() {
             </h2>
 
             {currentStep === 1 && (
-              <Step1Upload onJsonLoaded={handleJsonLoaded} />
+              <Step1Upload onJsonLoaded={setJsonLoaded} />
             )}
 
             {currentStep === 2 && parsedConfig && (
               <Step2Select
                 config={parsedConfig}
-                onEntitySelected={handleEntitySelected}
+                onEntitySelected={setEntitySelected}
               />
             )}
 
             {currentStep === 3 && selectedEntity && (
               <Step3Configure
                 selectedEntity={selectedEntity}
-                onConfigUpdated={handleConfigUpdated}
+                onConfigUpdated={setConfigUpdated}
               />
             )}
 
@@ -144,7 +113,7 @@ function App() {
                 config={parsedConfig}
                 selectedEntity={selectedEntity}
                 duplicationConfig={duplicationConfig}
-                onPreviewGenerated={handlePreviewGenerated}
+                onPreviewGenerated={setPreviewGenerated}
               />
             )}
 
@@ -154,8 +123,8 @@ function App() {
                 modifiedConfig={modifiedConfig}
                 selectedEntity={selectedEntity}
                 duplicationConfig={duplicationConfig}
-                onStartOver={handleStartOver}
-                onDuplicateMore={handleDuplicateMore}
+                onStartOver={startOver}
+                onDuplicateMore={duplicateMore}
               />
             )}
           </div>
@@ -163,14 +132,14 @@ function App() {
           {/* Navigation buttons */}
           <div className="flex justify-between mt-8">
             <Button
-              onClick={() => setCurrentStep(Math.max(1, currentStep - 1) as 1 | 2 | 3 | 4 | 5)}
+              onClick={previousStep}
               disabled={currentStep === 1}
               variant="outline"
             >
               ← Back
             </Button>
             <Button
-              onClick={() => setCurrentStep(Math.min(5, currentStep + 1) as 1 | 2 | 3 | 4 | 5)}
+              onClick={nextStep}
               disabled={currentStep === 5 || !canProceed()}
             >
               Next →
