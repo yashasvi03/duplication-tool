@@ -1,0 +1,94 @@
+[
+  {
+    "id": "680757558933114880",
+    "name": "Division Note Packaging",
+    "stageRequests": [
+      {
+        "id": "680757558933114881",
+        "name": "TRANSFER NOTE",
+        "orderTree": 1,
+        "taskRequests": [
+          {
+            "id": "680757558941503490",
+            "name": "Container Data",
+            "orderTree": 1,
+            "parameterRequests": [
+              {
+                "id": "680757558941503491",
+                "orderTree": 1,
+                "type": "text",
+                "label": "Container ID"
+              },
+              {
+                "id": "680757558941503492",
+                "orderTree": 2,
+                "type": "number",
+                "label": "Quantity"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "680757558933114882",
+        "name": "DIVISION NOTE 1",
+        "orderTree": 2,
+        "taskRequests": [
+          {
+            "id": "680757558941503493",
+            "name": "Scan Container 1D",
+            "orderTree": 2,
+            "parameterRequests": [
+              {
+                "id": "680757558941503494",
+                "orderTree": 1,
+                "type": "barcode",
+                "label": "Scan 1D Barcode"
+              },
+              {
+                "id": "680757558941503495",
+                "orderTree": 2,
+                "type": "text",
+                "label": "Container Type",
+                "rules": [
+                  {
+                    "show": {
+                      "parameters": ["680757558941503494"]
+                    }
+                  }
+                ]
+              }
+            ],
+            "automationRequests": [
+              {
+                "id": "680757561634246659",
+                "actionDetails": {
+                  "type": "setValue",
+                  "parameterId": "680757558941503495",
+                  "value": "Container"
+                },
+                "triggerDetails": {
+                  "type": "onScan",
+                  "parameterId": "680757558941503494"
+                }
+              }
+            ]
+          },
+          {
+            "id": "680757558941503496",
+            "name": "Scan Container 2D",
+            "orderTree": 3,
+            "parameterRequests": [
+              {
+                "id": "680757558941503497",
+                "orderTree": 1,
+                "type": "qrcode",
+                "label": "Scan 2D Barcode"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

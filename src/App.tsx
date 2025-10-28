@@ -1,7 +1,22 @@
 import { useState } from 'react'
+import Step1Upload from './steps/Step1Upload'
+import { Button } from './components/ui/button'
+import type { ChecklistConfig } from './types'
 
 function App() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1)
+  const [inputJson, setInputJson] = useState<string | null>(null)
+  const [parsedConfig, setParsedConfig] = useState<ChecklistConfig[] | null>(null)
+
+  const handleJsonLoaded = (json: string, parsed: ChecklistConfig[]) => {
+    setInputJson(json)
+    setParsedConfig(parsed)
+  }
+
+  const canProceed = () => {
+    if (currentStep === 1) return inputJson !== null && parsedConfig !== null
+    return true
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,7 +73,7 @@ function App() {
 
           {/* Main content area */}
           <div className="min-h-[400px]">
-            <h2 className="text-xl font-semibold mb-4">
+            <h2 className="text-xl font-semibold mb-6">
               Step {currentStep}: {
                 currentStep === 1 ? 'Upload JSON Configuration' :
                 currentStep === 2 ? 'Select Entity to Duplicate' :
@@ -68,27 +83,32 @@ function App() {
               }
             </h2>
 
-            <div className="text-center text-muted-foreground py-12">
-              Application structure initialized. Components will be added next.
-            </div>
+            {currentStep === 1 && (
+              <Step1Upload onJsonLoaded={handleJsonLoaded} />
+            )}
+
+            {currentStep !== 1 && (
+              <div className="text-center text-muted-foreground py-12">
+                Step {currentStep} component will be implemented next.
+              </div>
+            )}
           </div>
 
           {/* Navigation buttons */}
           <div className="flex justify-between mt-8">
-            <button
+            <Button
               onClick={() => setCurrentStep(Math.max(1, currentStep - 1) as 1 | 2 | 3 | 4 | 5)}
               disabled={currentStep === 1}
-              className="px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed rounded-md"
+              variant="outline"
             >
               ← Back
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setCurrentStep(Math.min(5, currentStep + 1) as 1 | 2 | 3 | 4 | 5)}
-              disabled={currentStep === 5}
-              className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-md"
+              disabled={currentStep === 5 || !canProceed()}
             >
               Next →
-            </button>
+            </Button>
           </div>
         </div>
       </div>
