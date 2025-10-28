@@ -37,6 +37,48 @@ export function duplicateEntity(
 }
 
 /**
+ * Multi-entity duplication engine - handles multiple entities at once
+ */
+export function duplicateMultipleEntities(
+  config: ChecklistConfig[],
+  selectedEntities: SelectedEntity[],
+  duplicationConfig: DuplicationConfig
+): ChecklistConfig[] {
+  // For single entity, use the original function
+  if (selectedEntities.length === 1) {
+    return duplicateEntity(config, selectedEntities[0], duplicationConfig);
+  }
+
+  const modifiedConfig = deepClone(config);
+
+  // Sort entities by their order position for consistent processing
+  const sortedEntities = [...selectedEntities].sort((a, b) => {
+    const orderA = a.data.orderTree || 0;
+    const orderB = b.data.orderTree || 0;
+    return orderA - orderB;
+  });
+
+  // Generate ID mappings for all entities
+  const allIdMappings: IdMapping[] = sortedEntities.map(entity =>
+    generateIdMappings(entity, duplicationConfig.numberOfCopies)
+  );
+
+  // Apply strategy-specific duplication
+  if (duplicationConfig.orderingStrategy === 'interleaved') {
+    applyInterleavedGrouped(modifiedConfig, sortedEntities, duplicationConfig, allIdMappings);
+  } else {
+    // Sequential strategy
+    if (duplicationConfig.groupingStrategy === 'relative') {
+      applySequentialRelative(modifiedConfig, sortedEntities, duplicationConfig, allIdMappings);
+    } else {
+      applySequentialGrouped(modifiedConfig, sortedEntities, duplicationConfig, allIdMappings);
+    }
+  }
+
+  return modifiedConfig;
+}
+
+/**
  * Generate ID mappings for all entities that will be duplicated
  */
 function generateIdMappings(
@@ -536,4 +578,207 @@ function adjustOrderTrees<T extends { orderTree: number }>(
   array.forEach((item, index) => {
     item.orderTree = index + 1;
   });
+}
+
+/**
+ * Algorithm 1: Interleaved Grouped
+ * All copies are inserted as one group after the last selected entity
+ * Pattern: A1 → B1 → C1 → A2 → B2 → C2
+ */
+function applyInterleavedGrouped(
+  config: ChecklistConfig[],
+  sortedEntities: SelectedEntity[],
+  duplicationConfig: DuplicationConfig,
+  allIdMappings: IdMapping[]
+): void {
+  const lastEntity = sortedEntities[sortedEntities.length - 1];
+  const entityType = lastEntity.type;
+
+  // Find the parent container
+  const checklist = config[lastEntity.checklistIndex];
+  let targetArray: any[];
+  let lastIndex: number;
+
+  if (entityType === 'stage') {
+    targetArray = checklist.stageRequests;
+    lastIndex = lastEntity.stageIndex!;
+  } else if (entityType === 'task') {
+    const stage = checklist.stageRequests[lastEntity.stageIndex!];
+    targetArray = stage.taskRequests;
+    lastIndex = lastEntity.taskIndex!;
+  } else { // parameter
+    const stage = checklist.stageRequests[lastEntity.stageIndex!];
+    const task = stage.taskRequests[lastEntity.taskIndex!];
+    targetArray = task.parameterRequests;
+    lastIndex = task.parameterRequests.findIndex(p => p.id === lastEntity.id);
+  }
+
+  // Collect all copies in interleaved order
+  const allCopies: any[] = [];
+
+  for (let copyIndex = 0; copyIndex < duplicationConfig.numberOfCopies; copyIndex++) {
+    for (let entityIndex = 0; entityIndex < sortedEntities.length; entityIndex++) {
+      const entity = sortedEntities[entityIndex];
+      const idMapping = allIdMappings[entityIndex];
+
+      const copy = createSingleCopy(entity, duplicationConfig, idMapping, copyIndex);
+      allCopies.push(copy);
+    }
+  }
+
+  // Insert all copies after the last entity
+  targetArray.splice(lastIndex + 1, 0, ...allCopies);
+
+  // Adjust order trees if needed
+  if (duplicationConfig.placement.autoShift) {
+    targetArray.forEach((item, index) => {
+      item.orderTree = index + 1;
+    });
+  }
+}
+
+/**
+ * Algorithm 2: Sequential Relative
+ * Each entity's copies are inserted near its original position
+ * Pattern: A1 → A2 (near A), then B1 → B2 (near B), then C1 → C2 (near C)
+ */
+function applySequentialRelative(
+  config: ChecklistConfig[],
+  sortedEntities: SelectedEntity[],
+  duplicationConfig: DuplicationConfig,
+  allIdMappings: IdMapping[]
+): void {
+  // Process entities in reverse order to maintain correct indices
+  for (let entityIndex = sortedEntities.length - 1; entityIndex >= 0; entityIndex--) {
+    const entity = sortedEntities[entityIndex];
+    const idMapping = allIdMappings[entityIndex];
+
+    // Use the existing single-entity duplication logic
+    if (entity.type === 'stage') {
+      duplicateStage(config, entity, duplicationConfig, idMapping);
+    } else if (entity.type === 'task') {
+      duplicateTask(config, entity, duplicationConfig, idMapping);
+    } else if (entity.type === 'parameter') {
+      duplicateParameter(config, entity, duplicationConfig, idMapping);
+    }
+  }
+}
+
+/**
+ * Algorithm 3: Sequential Grouped
+ * All originals stay together, then all copies are added as a block
+ * Pattern: A → B → C → A1 → B1 → C1 → A2 → B2 → C2
+ */
+function applySequentialGrouped(
+  config: ChecklistConfig[],
+  sortedEntities: SelectedEntity[],
+  duplicationConfig: DuplicationConfig,
+  allIdMappings: IdMapping[]
+): void {
+  const lastEntity = sortedEntities[sortedEntities.length - 1];
+  const entityType = lastEntity.type;
+
+  // Find the parent container
+  const checklist = config[lastEntity.checklistIndex];
+  let targetArray: any[];
+  let lastIndex: number;
+
+  if (entityType === 'stage') {
+    targetArray = checklist.stageRequests;
+    lastIndex = lastEntity.stageIndex!;
+  } else if (entityType === 'task') {
+    const stage = checklist.stageRequests[lastEntity.stageIndex!];
+    targetArray = stage.taskRequests;
+    lastIndex = lastEntity.taskIndex!;
+  } else { // parameter
+    const stage = checklist.stageRequests[lastEntity.stageIndex!];
+    const task = stage.taskRequests[lastEntity.taskIndex!];
+    targetArray = task.parameterRequests;
+    lastIndex = task.parameterRequests.findIndex(p => p.id === lastEntity.id);
+  }
+
+  // Collect all copies in sequential grouped order
+  const allCopies: any[] = [];
+
+  for (let entityIndex = 0; entityIndex < sortedEntities.length; entityIndex++) {
+    const entity = sortedEntities[entityIndex];
+    const idMapping = allIdMappings[entityIndex];
+
+    for (let copyIndex = 0; copyIndex < duplicationConfig.numberOfCopies; copyIndex++) {
+      const copy = createSingleCopy(entity, duplicationConfig, idMapping, copyIndex);
+      allCopies.push(copy);
+    }
+  }
+
+  // Insert all copies after the last entity
+  targetArray.splice(lastIndex + 1, 0, ...allCopies);
+
+  // Adjust order trees if needed
+  if (duplicationConfig.placement.autoShift) {
+    targetArray.forEach((item, index) => {
+      item.orderTree = index + 1;
+    });
+  }
+}
+
+/**
+ * Create a single copy of an entity
+ */
+function createSingleCopy(
+  entity: SelectedEntity,
+  duplicationConfig: DuplicationConfig,
+  idMapping: IdMapping,
+  copyIndex: number
+): any {
+  const copy = deepClone(entity.data);
+
+  // Update name
+  let entityName: string;
+  if (entity.type === 'stage') {
+    entityName = (entity.data as Stage).name;
+  } else if (entity.type === 'task') {
+    entityName = (entity.data as Task).name;
+  } else {
+    entityName = (entity.data as Parameter).label || `Parameter ${entity.data.id}`;
+  }
+
+  const newName = generateName(
+    duplicationConfig.namingPattern.template,
+    duplicationConfig.namingPattern.baseNameOverride || entityName,
+    copyIndex + 1,
+    duplicationConfig.namingPattern.zeroPadding,
+    duplicationConfig.namingPattern.paddingLength
+  );
+
+  if (entity.type === 'parameter') {
+    (copy as Parameter).label = newName;
+  } else {
+    (copy as Stage | Task).name = newName;
+  }
+
+  // Update ID
+  if (entity.type === 'stage') {
+    copy.id = idMapping.stages[entity.id]?.[copyIndex] || copy.id;
+  } else if (entity.type === 'task') {
+    copy.id = idMapping.tasks[entity.id]?.[copyIndex] || copy.id;
+  } else {
+    copy.id = idMapping.parameters[entity.id]?.[copyIndex] || copy.id;
+  }
+
+  // Remap nested content based on entity type
+  if (entity.type === 'stage') {
+    const stageCopy = copy as Stage;
+    if (stageCopy.taskRequests) {
+      stageCopy.taskRequests = stageCopy.taskRequests.map((task) => {
+        return remapTask(task, idMapping, copyIndex, duplicationConfig);
+      });
+    }
+  } else if (entity.type === 'task') {
+    const taskCopy = remapTask(copy as Task, idMapping, copyIndex, duplicationConfig);
+    return taskCopy;
+  } else {
+    remapParameterReferences(copy as Parameter, idMapping, copyIndex, duplicationConfig);
+  }
+
+  return copy;
 }

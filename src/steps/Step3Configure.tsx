@@ -19,25 +19,33 @@ import {
   REFERENCE_STRATEGY_LABELS,
   REFERENCE_STRATEGY_DESCRIPTIONS,
   PLACEMENT_LABELS,
+  ORDERING_STRATEGY_LABELS,
+  ORDERING_STRATEGY_DESCRIPTIONS,
+  GROUPING_STRATEGY_LABELS,
+  GROUPING_STRATEGY_DESCRIPTIONS,
+  ENTITY_TYPE_LABELS,
 } from '@/utils/constants';
 import type { DuplicationConfig, SelectedEntity } from '@/types';
 
 interface Step3ConfigureProps {
-  selectedEntity: SelectedEntity;
+  selectedEntities: SelectedEntity[];
   onConfigUpdated: (config: DuplicationConfig) => void;
 }
 
-export default function Step3Configure({ selectedEntity, onConfigUpdated }: Step3ConfigureProps) {
+export default function Step3Configure({ selectedEntities, onConfigUpdated }: Step3ConfigureProps) {
   const [config, setConfig] = useState<DuplicationConfig>(DEFAULT_DUPLICATION_CONFIG);
   const [copyCountError, setCopyCountError] = useState<string | null>(null);
   const [namingError, setNamingError] = useState<string | null>(null);
 
+  // Use first entity for naming preview (all will follow same pattern)
+  const firstEntity = selectedEntities[0];
   const entityName =
-    selectedEntity.type === 'stage' ? (selectedEntity.data as any).name :
-    selectedEntity.type === 'task' ? (selectedEntity.data as any).name :
-    (selectedEntity.data as any).label || 'Entity';
+    firstEntity.type === 'stage' ? (firstEntity.data as any).name :
+    firstEntity.type === 'task' ? (firstEntity.data as any).name :
+    (firstEntity.data as any).label || 'Entity';
 
   const baseName = config.namingPattern.baseNameOverride || entityName;
+  const lastEntity = selectedEntities[selectedEntities.length - 1];
 
   // Generate name previews
   const namePreview = useMemo(() => {
@@ -133,8 +141,31 @@ export default function Step3Configure({ selectedEntity, onConfigUpdated }: Step
     });
   };
 
+  const handleOrderingStrategyChange = (strategy: 'interleaved' | 'sequential') => {
+    updateConfig({ orderingStrategy: strategy });
+  };
+
+  const handleGroupingStrategyChange = (strategy: 'relative' | 'grouped') => {
+    updateConfig({ groupingStrategy: strategy });
+  };
+
+  // Conditionally show placement and grouping based on ordering strategy
+  const showGroupingStrategy = config.orderingStrategy === 'sequential';
+  const showPlacement = config.orderingStrategy === 'sequential';
+  const showMultiSelectInfo = selectedEntities.length > 1;
+
   return (
     <div className="space-y-6">
+      {/* Multi-Select Info */}
+      {showMultiSelectInfo && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Duplicating <strong>{selectedEntities.length}</strong> {ENTITY_TYPE_LABELS[firstEntity.type].toLowerCase()} entities.
+            All will use the same configuration.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Number of Copies */}
       <Card>
         <CardHeader>
@@ -336,8 +367,104 @@ export default function Step3Configure({ selectedEntity, onConfigUpdated }: Step
         </CardContent>
       </Card>
 
-      {/* Placement Options */}
-      <Card>
+      {/* Ordering Strategy (Multi-Select) */}
+      {showMultiSelectInfo && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ordering Strategy</CardTitle>
+            <CardDescription>
+              How should copies be ordered when duplicating multiple entities?
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <RadioGroup
+              value={config.orderingStrategy}
+              onValueChange={handleOrderingStrategyChange}
+            >
+              <div className="flex items-start space-x-3 rounded-lg border p-4 border-primary bg-primary/5">
+                <RadioGroupItem value="interleaved" id="interleaved" />
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="interleaved" className="cursor-pointer font-semibold">
+                    {ORDERING_STRATEGY_LABELS.interleaved}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {ORDERING_STRATEGY_DESCRIPTIONS.interleaved}
+                  </p>
+                  <Badge variant="default">Recommended</Badge>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 rounded-lg border p-4">
+                <RadioGroupItem value="sequential" id="sequential" />
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="sequential" className="cursor-pointer font-semibold">
+                    {ORDERING_STRATEGY_LABELS.sequential}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {ORDERING_STRATEGY_DESCRIPTIONS.sequential}
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+
+            {config.orderingStrategy === 'interleaved' && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  All copies will be inserted as a group after <strong>{lastEntity.data.name}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Grouping Strategy (Sequential only) */}
+      {showMultiSelectInfo && showGroupingStrategy && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Grouping Strategy</CardTitle>
+            <CardDescription>
+              Where should copies be placed relative to originals?
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <RadioGroup
+              value={config.groupingStrategy}
+              onValueChange={handleGroupingStrategyChange}
+            >
+              <div className="flex items-start space-x-3 rounded-lg border p-4 border-primary bg-primary/5">
+                <RadioGroupItem value="relative" id="relative" />
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="relative" className="cursor-pointer font-semibold">
+                    {GROUPING_STRATEGY_LABELS.relative}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {GROUPING_STRATEGY_DESCRIPTIONS.relative}
+                  </p>
+                  <Badge variant="default">Recommended</Badge>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 rounded-lg border p-4">
+                <RadioGroupItem value="grouped" id="grouped" />
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="grouped" className="cursor-pointer font-semibold">
+                    {GROUPING_STRATEGY_LABELS.grouped}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {GROUPING_STRATEGY_DESCRIPTIONS.grouped}
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Placement Options (Sequential only or single-select) */}
+      {(!showMultiSelectInfo || showPlacement) && (
+        <Card>
         <CardHeader>
           <CardTitle>Placement</CardTitle>
           <CardDescription>
@@ -381,6 +508,7 @@ export default function Step3Configure({ selectedEntity, onConfigUpdated }: Step
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

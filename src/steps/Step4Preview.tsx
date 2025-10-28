@@ -5,27 +5,31 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { generatePreview } from '@/utils/previewHelpers';
+import { generatePreview, generateMultiEntityPreview } from '@/utils/previewHelpers';
 import { ENTITY_TYPE_LABELS } from '@/utils/constants';
 import type { ChecklistConfig, SelectedEntity, DuplicationConfig } from '@/types';
 
 interface Step4PreviewProps {
   config: ChecklistConfig[];
-  selectedEntity: SelectedEntity;
+  selectedEntities: SelectedEntity[];
   duplicationConfig: DuplicationConfig;
   onPreviewGenerated: (modifiedConfig: ChecklistConfig[]) => void;
 }
 
 export default function Step4Preview({
   config,
-  selectedEntity,
+  selectedEntities,
   duplicationConfig,
   onPreviewGenerated,
 }: Step4PreviewProps) {
-  // Generate preview data
+  // Generate preview data (use multi-entity function if multiple entities selected)
   const { previewData, modifiedConfig } = useMemo(() => {
-    return generatePreview(config, selectedEntity, duplicationConfig);
-  }, [config, selectedEntity, duplicationConfig]);
+    if (selectedEntities.length === 1) {
+      return generatePreview(config, selectedEntities[0], duplicationConfig);
+    } else {
+      return generateMultiEntityPreview(config, selectedEntities, duplicationConfig);
+    }
+  }, [config, selectedEntities, duplicationConfig]);
 
   // Pass modified config back to parent
   useMemo(() => {
@@ -47,12 +51,14 @@ export default function Step4Preview({
     return severity === 'error' ? 'destructive' : 'default';
   };
 
+  const firstEntity = selectedEntities[0];
+  const isMultiSelect = selectedEntities.length > 1;
   const entityName =
-    selectedEntity.type === 'stage'
-      ? (selectedEntity.data as any).name
-      : selectedEntity.type === 'task'
-      ? (selectedEntity.data as any).name
-      : (selectedEntity.data as any).label || 'Entity';
+    firstEntity.type === 'stage'
+      ? (firstEntity.data as any).name
+      : firstEntity.type === 'task'
+      ? (firstEntity.data as any).name
+      : (firstEntity.data as any).label || 'Entity';
 
   return (
     <div className="space-y-6">
@@ -70,18 +76,36 @@ export default function Step4Preview({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-sm text-muted-foreground mb-1">Source Entity</div>
-              <div className="font-semibold">{entityName}</div>
+              <div className="text-sm text-muted-foreground mb-1">
+                {isMultiSelect ? `Source Entities (${selectedEntities.length})` : 'Source Entity'}
+              </div>
+              {isMultiSelect ? (
+                <div className="space-y-1">
+                  <div className="font-semibold">{selectedEntities.length} {ENTITY_TYPE_LABELS[firstEntity.type].toLowerCase()}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {entityName} ... {selectedEntities[selectedEntities.length - 1].data.name}
+                  </div>
+                </div>
+              ) : (
+                <div className="font-semibold">{entityName}</div>
+              )}
               <Badge variant="outline" className="mt-1">
-                {ENTITY_TYPE_LABELS[selectedEntity.type]}
+                {ENTITY_TYPE_LABELS[firstEntity.type]}
               </Badge>
             </div>
 
             <div>
-              <div className="text-sm text-muted-foreground mb-1">Number of Copies</div>
+              <div className="text-sm text-muted-foreground mb-1">
+                Copies {isMultiSelect ? 'per Entity' : ''}
+              </div>
               <div className="text-3xl font-bold text-primary">
                 {duplicationConfig.numberOfCopies}
               </div>
+              {isMultiSelect && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Total: {duplicationConfig.numberOfCopies * selectedEntities.length} new entities
+                </div>
+              )}
             </div>
           </div>
 
@@ -138,9 +162,9 @@ export default function Step4Preview({
             <div className="font-medium mb-1">Placement:</div>
             <div className="text-muted-foreground">
               {duplicationConfig.placement.position === 'after' &&
-                `After "${entityName}" (order ${(selectedEntity.data as any).orderTree})`}
+                `After "${entityName}" (order ${(firstEntity.data as any).orderTree})`}
               {duplicationConfig.placement.position === 'before' &&
-                `Before "${entityName}" (order ${(selectedEntity.data as any).orderTree})`}
+                `Before "${entityName}" (order ${(firstEntity.data as any).orderTree})`}
               {duplicationConfig.placement.position === 'start' &&
                 'At the start of parent container'}
               {duplicationConfig.placement.position === 'end' &&

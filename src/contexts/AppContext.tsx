@@ -11,7 +11,7 @@ interface AppState {
   // Data State
   inputJson: string | null;
   parsedConfig: ChecklistConfig[] | null;
-  selectedEntity: SelectedEntity | null;
+  selectedEntities: SelectedEntity[]; // Changed from single entity to array
   duplicationConfig: DuplicationConfig | null;
   modifiedConfig: ChecklistConfig[] | null;
 }
@@ -28,7 +28,11 @@ interface AppActions {
 
   // Data Actions
   setJsonLoaded: (json: string, parsed: ChecklistConfig[]) => void;
-  setEntitySelected: (entity: SelectedEntity) => void;
+  setEntitySelected: (entity: SelectedEntity) => void; // Legacy - sets single entity
+  addSelectedEntity: (entity: SelectedEntity) => void; // Multi-select: add entity
+  removeSelectedEntity: (entityId: string) => void; // Multi-select: remove entity
+  toggleEntitySelection: (entity: SelectedEntity) => void; // Multi-select: toggle entity
+  clearSelection: () => void; // Multi-select: clear all selections
   setConfigUpdated: (config: DuplicationConfig) => void;
   setPreviewGenerated: (modified: ChecklistConfig[]) => void;
 
@@ -39,7 +43,7 @@ interface AppActions {
   // Direct Setters (for advanced use cases)
   setInputJson: (json: string | null) => void;
   setParsedConfig: (config: ChecklistConfig[] | null) => void;
-  setSelectedEntity: (entity: SelectedEntity | null) => void;
+  setSelectedEntities: (entities: SelectedEntity[]) => void;
   setDuplicationConfig: (config: DuplicationConfig | null) => void;
   setModifiedConfig: (config: ChecklistConfig[] | null) => void;
 }
@@ -69,7 +73,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [inputJson, setInputJson] = useState<string | null>(null);
   const [parsedConfig, setParsedConfig] = useState<ChecklistConfig[] | null>(null);
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
+  const [selectedEntities, setSelectedEntities] = useState<SelectedEntity[]>([]);
   const [duplicationConfig, setDuplicationConfig] = useState<DuplicationConfig | null>(null);
   const [modifiedConfig, setModifiedConfig] = useState<ChecklistConfig[] | null>(null);
 
@@ -92,7 +96,7 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const canProceed = (): boolean => {
     if (currentStep === 1) return inputJson !== null && parsedConfig !== null;
-    if (currentStep === 2) return selectedEntity !== null;
+    if (currentStep === 2) return selectedEntities.length > 0;
     if (currentStep === 3) return duplicationConfig !== null;
     if (currentStep === 4) return modifiedConfig !== null;
     return true;
@@ -105,7 +109,37 @@ export function AppProvider({ children }: AppProviderProps) {
   };
 
   const setEntitySelected = (entity: SelectedEntity) => {
-    setSelectedEntity(entity);
+    // Legacy function - now sets array with single entity for backward compatibility
+    setSelectedEntities([entity]);
+  };
+
+  const addSelectedEntity = (entity: SelectedEntity) => {
+    setSelectedEntities((prev) => {
+      // Check if already selected
+      if (prev.some((e) => e.id === entity.id)) {
+        return prev;
+      }
+      return [...prev, entity];
+    });
+  };
+
+  const removeSelectedEntity = (entityId: string) => {
+    setSelectedEntities((prev) => prev.filter((e) => e.id !== entityId));
+  };
+
+  const toggleEntitySelection = (entity: SelectedEntity) => {
+    setSelectedEntities((prev) => {
+      const isSelected = prev.some((e) => e.id === entity.id);
+      if (isSelected) {
+        return prev.filter((e) => e.id !== entity.id);
+      } else {
+        return [...prev, entity];
+      }
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedEntities([]);
   };
 
   const setConfigUpdated = (config: DuplicationConfig) => {
@@ -121,14 +155,14 @@ export function AppProvider({ children }: AppProviderProps) {
     setCurrentStep(1);
     setInputJson(null);
     setParsedConfig(null);
-    setSelectedEntity(null);
+    setSelectedEntities([]);
     setDuplicationConfig(null);
     setModifiedConfig(null);
   };
 
   const duplicateMore = () => {
     setCurrentStep(2);
-    setSelectedEntity(null);
+    setSelectedEntities([]);
     setDuplicationConfig(null);
     setModifiedConfig(null);
   };
@@ -139,7 +173,7 @@ export function AppProvider({ children }: AppProviderProps) {
     currentStep,
     inputJson,
     parsedConfig,
-    selectedEntity,
+    selectedEntities,
     duplicationConfig,
     modifiedConfig,
 
@@ -152,6 +186,10 @@ export function AppProvider({ children }: AppProviderProps) {
     // Data Actions
     setJsonLoaded,
     setEntitySelected,
+    addSelectedEntity,
+    removeSelectedEntity,
+    toggleEntitySelection,
+    clearSelection,
     setConfigUpdated,
     setPreviewGenerated,
 
@@ -162,7 +200,7 @@ export function AppProvider({ children }: AppProviderProps) {
     // Direct Setters
     setInputJson,
     setParsedConfig,
-    setSelectedEntity,
+    setSelectedEntities,
     setDuplicationConfig,
     setModifiedConfig,
   };
@@ -190,7 +228,7 @@ export function useAppState() {
     currentStep: context.currentStep,
     inputJson: context.inputJson,
     parsedConfig: context.parsedConfig,
-    selectedEntity: context.selectedEntity,
+    selectedEntities: context.selectedEntities,
     duplicationConfig: context.duplicationConfig,
     modifiedConfig: context.modifiedConfig,
   };
@@ -208,13 +246,17 @@ export function useAppActions() {
     canProceed: context.canProceed,
     setJsonLoaded: context.setJsonLoaded,
     setEntitySelected: context.setEntitySelected,
+    addSelectedEntity: context.addSelectedEntity,
+    removeSelectedEntity: context.removeSelectedEntity,
+    toggleEntitySelection: context.toggleEntitySelection,
+    clearSelection: context.clearSelection,
     setConfigUpdated: context.setConfigUpdated,
     setPreviewGenerated: context.setPreviewGenerated,
     startOver: context.startOver,
     duplicateMore: context.duplicateMore,
     setInputJson: context.setInputJson,
     setParsedConfig: context.setParsedConfig,
-    setSelectedEntity: context.setSelectedEntity,
+    setSelectedEntities: context.setSelectedEntities,
     setDuplicationConfig: context.setDuplicationConfig,
     setModifiedConfig: context.setModifiedConfig,
   };

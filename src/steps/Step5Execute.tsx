@@ -12,7 +12,7 @@ import type { ChecklistConfig, DuplicationConfig, SelectedEntity } from '@/types
 interface Step5ExecuteProps {
   originalConfig: ChecklistConfig[];
   modifiedConfig: ChecklistConfig[];
-  selectedEntity: SelectedEntity;
+  selectedEntities: SelectedEntity[];
   duplicationConfig: DuplicationConfig;
   onStartOver: () => void;
   onDuplicateMore: () => void;
@@ -21,7 +21,7 @@ interface Step5ExecuteProps {
 export default function Step5Execute({
   originalConfig,
   modifiedConfig,
-  selectedEntity,
+  selectedEntities,
   duplicationConfig,
   onStartOver,
   onDuplicateMore,
@@ -72,12 +72,13 @@ export default function Step5Execute({
     statistics.totalAutomations +
     statistics.totalRules;
 
+  const firstEntity = selectedEntities[0];
   const entityName =
-    selectedEntity.type === 'stage'
-      ? (selectedEntity.data as any).name
-      : selectedEntity.type === 'task'
-      ? (selectedEntity.data as any).name
-      : (selectedEntity.data as any).label || 'Entity';
+    firstEntity.type === 'stage'
+      ? (firstEntity.data as any).name
+      : firstEntity.type === 'task'
+      ? (firstEntity.data as any).name
+      : (firstEntity.data as any).label || 'Entity';
 
   const modifiedJsonSize = new Blob([JSON.stringify(modifiedConfig)]).size;
 

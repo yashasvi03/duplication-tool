@@ -11,14 +11,15 @@ function App() {
   const {
     currentStep,
     parsedConfig,
-    selectedEntity,
+    selectedEntities,
     duplicationConfig,
     modifiedConfig,
     nextStep,
     previousStep,
     canProceed,
     setJsonLoaded,
-    setEntitySelected,
+    toggleEntitySelection,
+    clearSelection,
     setConfigUpdated,
     setPreviewGenerated,
     startOver,
@@ -99,31 +100,33 @@ function App() {
             {currentStep === 2 && parsedConfig && (
               <Step2Select
                 config={parsedConfig}
-                onEntitySelected={setEntitySelected}
+                selectedEntities={selectedEntities}
+                onToggleEntity={toggleEntitySelection}
+                onClearSelection={clearSelection}
               />
             )}
 
-            {currentStep === 3 && selectedEntity && (
+            {currentStep === 3 && selectedEntities.length > 0 && (
               <Step3Configure
-                selectedEntity={selectedEntity}
+                selectedEntities={selectedEntities}
                 onConfigUpdated={setConfigUpdated}
               />
             )}
 
-            {currentStep === 4 && parsedConfig && selectedEntity && duplicationConfig && (
+            {currentStep === 4 && parsedConfig && selectedEntities.length > 0 && duplicationConfig && (
               <Step4Preview
                 config={parsedConfig}
-                selectedEntity={selectedEntity}
+                selectedEntities={selectedEntities}
                 duplicationConfig={duplicationConfig}
                 onPreviewGenerated={setPreviewGenerated}
               />
             )}
 
-            {currentStep === 5 && parsedConfig && modifiedConfig && selectedEntity && duplicationConfig && (
+            {currentStep === 5 && parsedConfig && modifiedConfig && selectedEntities.length > 0 && duplicationConfig && (
               <Step5Execute
                 originalConfig={parsedConfig}
                 modifiedConfig={modifiedConfig}
-                selectedEntity={selectedEntity}
+                selectedEntities={selectedEntities}
                 duplicationConfig={duplicationConfig}
                 onStartOver={startOver}
                 onDuplicateMore={duplicateMore}

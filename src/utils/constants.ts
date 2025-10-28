@@ -11,6 +11,8 @@ export const DEFAULT_DUPLICATION_CONFIG: DuplicationConfig = {
     zeroPadding: true,
     paddingLength: 3,
   },
+  orderingStrategy: 'interleaved',
+  groupingStrategy: 'relative',
   components: {
     automations: true,
     linkedParameters: true,
@@ -143,4 +145,36 @@ export const WARNING_ICONS = {
   name_conflict: 'AlertTriangle',
   circular_reference: 'RotateCw',
   other: 'Info',
+} as const;
+
+/**
+ * Ordering strategy labels
+ */
+export const ORDERING_STRATEGY_LABELS = {
+  interleaved: 'Interleaved (Recommended)',
+  sequential: 'Sequential',
+} as const;
+
+/**
+ * Ordering strategy descriptions
+ */
+export const ORDERING_STRATEGY_DESCRIPTIONS = {
+  interleaved: 'Copies inserted as one group: A₁ → B₁ → C₁ → A₂ → B₂ → C₂',
+  sequential: 'All copies of each entity together: A₁ → A₂ → B₁ → B₂ → C₁ → C₂',
+} as const;
+
+/**
+ * Grouping strategy labels
+ */
+export const GROUPING_STRATEGY_LABELS = {
+  relative: 'Relative to Each Original',
+  grouped: 'Keep All Together',
+} as const;
+
+/**
+ * Grouping strategy descriptions
+ */
+export const GROUPING_STRATEGY_DESCRIPTIONS = {
+  relative: 'Insert each entity\'s copies near its original position',
+  grouped: 'Keep all originals together, then add all copies as a block',
 } as const;

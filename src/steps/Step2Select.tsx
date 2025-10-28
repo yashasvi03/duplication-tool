@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
-import { Search, ChevronRight, Clipboard, Folder, CheckSquare, Settings, Info } from 'lucide-react';
+import { Search, ChevronRight, Clipboard, Folder, CheckSquare, Settings, Info, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   buildTreeFromConfig,
   treeNodeToSelectedEntity,
@@ -17,12 +19,18 @@ import type { ChecklistConfig, SelectedEntity, TreeNode } from '@/types';
 
 interface Step2SelectProps {
   config: ChecklistConfig[];
-  onEntitySelected: (entity: SelectedEntity) => void;
+  selectedEntities: SelectedEntity[];
+  onToggleEntity: (entity: SelectedEntity) => void;
+  onClearSelection: () => void;
 }
 
-export default function Step2Select({ config, onEntitySelected }: Step2SelectProps) {
+export default function Step2Select({
+  config,
+  selectedEntities,
+  onToggleEntity,
+  onClearSelection
+}: Step2SelectProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   // Build tree structure
@@ -34,18 +42,44 @@ export default function Step2Select({ config, onEntitySelected }: Step2SelectPro
     return searchTree(tree, searchQuery);
   }, [tree, searchQuery]);
 
+  // Track selected IDs for quick lookup
+  const selectedIds = useMemo(() => {
+    return new Set(selectedEntities.map(e => e.id));
+  }, [selectedEntities]);
+
+  // Determine the selected entity type (for same-type validation)
+  const selectedType = selectedEntities.length > 0 ? selectedEntities[0].type : null;
+
+  const canSelectNode = (node: TreeNode): boolean => {
+    // Checklists cannot be selected
+    if (node.type === 'checklist') return false;
+
+    // If nothing selected yet, can select any non-checklist node
+    if (!selectedType) return true;
+
+    // If something is selected, can only select same type
+    return node.type === selectedType;
+  };
+
+  const handleCheckboxChange = (node: TreeNode, _checked: boolean) => {
+    if (!canSelectNode(node)) return;
+
+    const selectedEntity = treeNodeToSelectedEntity(node, config);
+    if (selectedEntity) {
+      onToggleEntity(selectedEntity);
+    }
+  };
+
   const handleNodeClick = (node: TreeNode) => {
-    // Only stages, tasks, and parameters can be selected (not checklists)
+    // Checklists just toggle expand
     if (node.type === 'checklist') {
-      // Just toggle expand
       toggleExpand(node.id);
       return;
     }
 
-    setSelectedNode(node);
-    const selectedEntity = treeNodeToSelectedEntity(node, config);
-    if (selectedEntity) {
-      onEntitySelected(selectedEntity);
+    // For selectable nodes, expand if they have children
+    if (node.children.length > 0) {
+      toggleExpand(node.id);
     }
   };
 
@@ -77,49 +111,69 @@ export default function Step2Select({ config, onEntitySelected }: Step2SelectPro
 
   const renderTreeNode = (node: TreeNode) => {
     const isExpanded = expandedNodes.has(node.id);
-    const isSelected = selectedNode?.id === node.id;
+    const isSelected = selectedIds.has(node.id);
     const hasChildren = node.children.length > 0;
+    const isSelectable = canSelectNode(node);
+    const isDisabled = !isSelectable && node.type !== 'checklist';
 
     return (
       <div key={node.id} className="select-none">
-        <button
-          onClick={() => handleNodeClick(node)}
-          className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors ${
+        <div
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
             isSelected
-              ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-accent hover:text-accent-foreground'
-          }`}
+              ? 'bg-accent'
+              : 'hover:bg-accent/50'
+          } ${isDisabled ? 'opacity-50' : ''}`}
           style={{ paddingLeft: `${node.level * 16 + 12}px` }}
         >
+          {/* Expand/Collapse Arrow */}
           {hasChildren && (
-            <ChevronRight
-              className={`h-4 w-4 transition-transform ${
-                isExpanded ? 'rotate-90' : ''
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpand(node.id);
-              }}
-            />
+            <button
+              onClick={() => toggleExpand(node.id)}
+              className="p-0 hover:bg-transparent"
+            >
+              <ChevronRight
+                className={`h-4 w-4 transition-transform ${
+                  isExpanded ? 'rotate-90' : ''
+                }`}
+              />
+            </button>
           )}
           {!hasChildren && <div className="w-4" />}
 
-          {renderIcon(node.type)}
-
-          <span className="flex-1 truncate font-medium text-sm">{node.name}</span>
-
-          {node.orderTree !== undefined && (
-            <span className="text-xs text-muted-foreground">#{node.orderTree}</span>
+          {/* Checkbox for selectable nodes */}
+          {node.type !== 'checklist' && (
+            <Checkbox
+              checked={isSelected}
+              disabled={isDisabled}
+              onCheckedChange={(checked) => handleCheckboxChange(node, checked as boolean)}
+              onClick={(e) => e.stopPropagation()}
+            />
           )}
+          {node.type === 'checklist' && <div className="w-4" />}
 
-          {node.counts && (
-            <Badge variant="secondary" className="text-xs">
-              {node.type === 'checklist' && `${node.counts.stages} stages`}
-              {node.type === 'stage' && `${node.counts.tasks} tasks`}
-              {node.type === 'task' && `${node.counts.parameters} params`}
-            </Badge>
-          )}
-        </button>
+          {/* Icon */}
+          <button
+            onClick={() => handleNodeClick(node)}
+            className="flex items-center gap-2 flex-1 min-w-0 text-left"
+          >
+            {renderIcon(node.type)}
+
+            <span className="flex-1 truncate font-medium text-sm">{node.name}</span>
+
+            {node.orderTree !== undefined && (
+              <span className="text-xs text-muted-foreground">#{node.orderTree}</span>
+            )}
+
+            {node.counts && (
+              <Badge variant="secondary" className="text-xs">
+                {node.type === 'checklist' && `${node.counts.stages} stages`}
+                {node.type === 'stage' && `${node.counts.tasks} tasks`}
+                {node.type === 'task' && `${node.counts.parameters} params`}
+              </Badge>
+            )}
+          </button>
+        </div>
 
         {hasChildren && isExpanded && (
           <div>{node.children.map((child) => renderTreeNode(child))}</div>
@@ -134,10 +188,38 @@ export default function Step2Select({ config, onEntitySelected }: Step2SelectPro
       <div className="lg:col-span-2 space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Workflow Structure</CardTitle>
-            <CardDescription>
-              Select a stage, task, or parameter to duplicate
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Workflow Structure</CardTitle>
+                <CardDescription>
+                  Select entities to duplicate (same type only)
+                </CardDescription>
+              </div>
+              {selectedEntities.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="default" className="text-sm">
+                    {selectedEntities.length} selected
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onClearSelection}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+            {selectedType && (
+              <Alert className="mt-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Selecting <strong>{ENTITY_TYPE_LABELS[selectedType]}</strong> entities.
+                  Only {ENTITY_TYPE_LABELS[selectedType].toLowerCase()} can be selected together.
+                </AlertDescription>
+              </Alert>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Search */}
@@ -159,23 +241,35 @@ export default function Step2Select({ config, onEntitySelected }: Step2SelectPro
                 </div>
                 <ScrollArea className="h-[200px]">
                   <div className="space-y-1">
-                    {filteredResults.map((node) => (
-                      <button
-                        key={node.id}
-                        onClick={() => handleNodeClick(node)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors ${
-                          selectedNode?.id === node.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'hover:bg-accent'
-                        }`}
-                      >
-                        {renderIcon(node.type)}
-                        <span className="flex-1 truncate text-sm">{node.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {ENTITY_TYPE_LABELS[node.type]}
-                        </Badge>
-                      </button>
-                    ))}
+                    {filteredResults.map((node) => {
+                      const isSelected = selectedIds.has(node.id);
+                      const isSelectable = canSelectNode(node);
+                      const isDisabled = !isSelectable;
+
+                      return (
+                        <div
+                          key={node.id}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                            isSelected
+                              ? 'bg-accent'
+                              : 'hover:bg-accent/50'
+                          } ${isDisabled ? 'opacity-50' : ''}`}
+                        >
+                          {node.type !== 'checklist' && (
+                            <Checkbox
+                              checked={isSelected}
+                              disabled={isDisabled}
+                              onCheckedChange={(checked) => handleCheckboxChange(node, checked as boolean)}
+                            />
+                          )}
+                          {renderIcon(node.type)}
+                          <span className="flex-1 truncate text-sm">{node.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {ENTITY_TYPE_LABELS[node.type]}
+                          </Badge>
+                        </div>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               </div>
@@ -202,121 +296,103 @@ export default function Step2Select({ config, onEntitySelected }: Step2SelectPro
         </Card>
       </div>
 
-      {/* Right Panel - Entity Details */}
+      {/* Right Panel - Selected Entities */}
       <div className="lg:col-span-1">
-        {selectedNode ? (
+        {selectedEntities.length > 0 ? (
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2">
-                {renderIcon(selectedNode.type)}
-                <CardTitle className="text-lg">Selected Entity</CardTitle>
-              </div>
+              <CardTitle className="text-lg">
+                Selected Entities ({selectedEntities.length})
+              </CardTitle>
+              <CardDescription>
+                {selectedType && `${ENTITY_TYPE_LABELS[selectedType]} entities`}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">Name</div>
-                <div className="font-semibold">{selectedNode.name}</div>
-              </div>
+            <CardContent>
+              <ScrollArea className="h-[500px]">
+                <div className="space-y-3">
+                  {selectedEntities.map((entity, index) => (
+                    <div
+                      key={entity.id}
+                      className="p-3 border rounded-md space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {renderIcon(entity.type)}
+                          <span className="font-medium text-sm">
+                            {entity.data.name}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onToggleEntity(entity)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
 
-              <Separator />
+                      <div className="text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Position:</span>
+                          <code className="bg-muted px-1.5 py-0.5 rounded">
+                            #{entity.data.orderTree || index + 1}
+                          </code>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">ID:</span>
+                          <code className="bg-muted px-1.5 py-0.5 rounded text-[10px]">
+                            {entity.id.substring(0, 8)}...
+                          </code>
+                        </div>
+                      </div>
 
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
-                <Badge variant="outline">
-                  {ENTITY_TYPE_LABELS[selectedNode.type]}
-                </Badge>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">ID</div>
-                <code className="text-xs bg-muted px-2 py-1 rounded">
-                  {selectedNode.id}
-                </code>
-              </div>
-
-              {selectedNode.orderTree !== undefined && (
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-1">
-                    Order Position
-                  </div>
-                  <div className="text-sm">{selectedNode.orderTree}</div>
+                      <div className="text-xs text-muted-foreground pt-1 border-t">
+                        {entity.path.join(' > ')}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </ScrollArea>
 
-              {selectedNode.counts && (
-                <>
-                  <Separator />
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-2">
-                      Contains
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      {selectedNode.counts.stages > 0 && (
-                        <div className="flex justify-between">
-                          <span>Stages</span>
-                          <Badge variant="secondary">{selectedNode.counts.stages}</Badge>
-                        </div>
-                      )}
-                      {selectedNode.counts.tasks > 0 && (
-                        <div className="flex justify-between">
-                          <span>Tasks</span>
-                          <Badge variant="secondary">{selectedNode.counts.tasks}</Badge>
-                        </div>
-                      )}
-                      {selectedNode.counts.parameters > 0 && (
-                        <div className="flex justify-between">
-                          <span>Parameters</span>
-                          <Badge variant="secondary">{selectedNode.counts.parameters}</Badge>
-                        </div>
-                      )}
-                      {selectedNode.counts.automations > 0 && (
-                        <div className="flex justify-between">
-                          <span>Automations</span>
-                          <Badge variant="secondary">{selectedNode.counts.automations}</Badge>
-                        </div>
-                      )}
-                      {selectedNode.counts.rules > 0 && (
-                        <div className="flex justify-between">
-                          <span>Rules</span>
-                          <Badge variant="secondary">{selectedNode.counts.rules}</Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
+              <Separator className="my-4" />
 
-              <Separator />
-
-              <div>
-                <div className="text-sm font-medium text-muted-foreground mb-2">Path</div>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  {selectedNode.parent && (
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: selectedNode.level }).map((_, i) => (
-                        <ChevronRight key={i} className="h-3 w-3" />
-                      ))}
-                      <span className="truncate">{selectedNode.name}</span>
-                    </div>
-                  )}
+              <div className="text-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Total Selected:</span>
+                  <Badge>{selectedEntities.length}</Badge>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={onClearSelection}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
               </div>
             </CardContent>
           </Card>
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Entity Details</CardTitle>
+              <CardTitle className="text-lg">Selection</CardTitle>
               <CardDescription>
-                Select an entity from the tree to view details
+                Select entities to duplicate
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-12 text-muted-foreground">
                 <Info className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">
-                  Click on a stage, task, or parameter in the tree to select it for duplication
+                <p className="text-sm mb-4">
+                  Select one or more entities from the tree
                 </p>
+                <ul className="text-xs text-left space-y-1 max-w-xs mx-auto">
+                  <li>• Use checkboxes to select multiple entities</li>
+                  <li>• Only same-type entities can be selected together</li>
+                  <li>• Checklists cannot be duplicated</li>
+                </ul>
               </div>
             </CardContent>
           </Card>

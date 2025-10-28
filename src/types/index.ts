@@ -96,6 +96,8 @@ export interface DuplicationConfig {
     zeroPadding: boolean;
     paddingLength: number;
   };
+  orderingStrategy: 'interleaved' | 'sequential'; // Multi-select: how copies are ordered
+  groupingStrategy?: 'relative' | 'grouped'; // Sequential only: where to place copies
   components: {
     automations: boolean;
     linkedParameters: boolean;
