@@ -1,20 +1,27 @@
 import { useState } from 'react'
 import Step1Upload from './steps/Step1Upload'
+import Step2Select from './steps/Step2Select'
 import { Button } from './components/ui/button'
-import type { ChecklistConfig } from './types'
+import type { ChecklistConfig, SelectedEntity } from './types'
 
 function App() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1)
   const [inputJson, setInputJson] = useState<string | null>(null)
   const [parsedConfig, setParsedConfig] = useState<ChecklistConfig[] | null>(null)
+  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null)
 
   const handleJsonLoaded = (json: string, parsed: ChecklistConfig[]) => {
     setInputJson(json)
     setParsedConfig(parsed)
   }
 
+  const handleEntitySelected = (entity: SelectedEntity) => {
+    setSelectedEntity(entity)
+  }
+
   const canProceed = () => {
     if (currentStep === 1) return inputJson !== null && parsedConfig !== null
+    if (currentStep === 2) return selectedEntity !== null
     return true
   }
 
@@ -87,7 +94,14 @@ function App() {
               <Step1Upload onJsonLoaded={handleJsonLoaded} />
             )}
 
-            {currentStep !== 1 && (
+            {currentStep === 2 && parsedConfig && (
+              <Step2Select
+                config={parsedConfig}
+                onEntitySelected={handleEntitySelected}
+              />
+            )}
+
+            {currentStep > 2 && (
               <div className="text-center text-muted-foreground py-12">
                 Step {currentStep} component will be implemented next.
               </div>
