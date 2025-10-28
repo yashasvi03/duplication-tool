@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import Step1Upload from './steps/Step1Upload'
 import Step2Select from './steps/Step2Select'
+import Step3Configure from './steps/Step3Configure'
 import { Button } from './components/ui/button'
-import type { ChecklistConfig, SelectedEntity } from './types'
+import type { ChecklistConfig, SelectedEntity, DuplicationConfig } from './types'
 
 function App() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1)
   const [inputJson, setInputJson] = useState<string | null>(null)
   const [parsedConfig, setParsedConfig] = useState<ChecklistConfig[] | null>(null)
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null)
+  const [duplicationConfig, setDuplicationConfig] = useState<DuplicationConfig | null>(null)
 
   const handleJsonLoaded = (json: string, parsed: ChecklistConfig[]) => {
     setInputJson(json)
@@ -19,9 +21,14 @@ function App() {
     setSelectedEntity(entity)
   }
 
+  const handleConfigUpdated = (config: DuplicationConfig) => {
+    setDuplicationConfig(config)
+  }
+
   const canProceed = () => {
     if (currentStep === 1) return inputJson !== null && parsedConfig !== null
     if (currentStep === 2) return selectedEntity !== null
+    if (currentStep === 3) return duplicationConfig !== null
     return true
   }
 
@@ -101,7 +108,14 @@ function App() {
               />
             )}
 
-            {currentStep > 2 && (
+            {currentStep === 3 && selectedEntity && (
+              <Step3Configure
+                selectedEntity={selectedEntity}
+                onConfigUpdated={handleConfigUpdated}
+              />
+            )}
+
+            {currentStep > 3 && (
               <div className="text-center text-muted-foreground py-12">
                 Step {currentStep} component will be implemented next.
               </div>
