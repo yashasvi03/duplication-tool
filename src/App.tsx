@@ -3,6 +3,7 @@ import Step1Upload from './steps/Step1Upload'
 import Step2Select from './steps/Step2Select'
 import Step3Configure from './steps/Step3Configure'
 import Step4Preview from './steps/Step4Preview'
+import Step5Execute from './steps/Step5Execute'
 import { Button } from './components/ui/button'
 import type { ChecklistConfig, SelectedEntity, DuplicationConfig } from './types'
 
@@ -29,6 +30,22 @@ function App() {
 
   const handlePreviewGenerated = (modified: ChecklistConfig[]) => {
     setModifiedConfig(modified)
+  }
+
+  const handleStartOver = () => {
+    setCurrentStep(1)
+    setInputJson(null)
+    setParsedConfig(null)
+    setSelectedEntity(null)
+    setDuplicationConfig(null)
+    setModifiedConfig(null)
+  }
+
+  const handleDuplicateMore = () => {
+    setCurrentStep(2)
+    setSelectedEntity(null)
+    setDuplicationConfig(null)
+    setModifiedConfig(null)
   }
 
   const canProceed = () => {
@@ -131,10 +148,15 @@ function App() {
               />
             )}
 
-            {currentStep > 4 && (
-              <div className="text-center text-muted-foreground py-12">
-                Step {currentStep} component will be implemented next.
-              </div>
+            {currentStep === 5 && parsedConfig && modifiedConfig && selectedEntity && duplicationConfig && (
+              <Step5Execute
+                originalConfig={parsedConfig}
+                modifiedConfig={modifiedConfig}
+                selectedEntity={selectedEntity}
+                duplicationConfig={duplicationConfig}
+                onStartOver={handleStartOver}
+                onDuplicateMore={handleDuplicateMore}
+              />
             )}
           </div>
 
