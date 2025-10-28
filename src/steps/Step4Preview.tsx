@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { CheckCircle2, AlertTriangle, Info, ArrowUpDown, ExternalLink } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Info, ArrowUpDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';

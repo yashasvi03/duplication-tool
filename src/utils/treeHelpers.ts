@@ -2,7 +2,6 @@ import type {
   ChecklistConfig,
   Stage,
   Task,
-  Parameter,
   TreeNode,
   SelectedEntity,
   EntityCounts,
@@ -12,7 +11,7 @@ import type {
  * Build a tree structure from checklist configuration
  */
 export function buildTreeFromConfig(config: ChecklistConfig[]): TreeNode[] {
-  return config.map((checklist, checklistIndex) => {
+  return config.map((checklist, _checklistIndex) => {
     const checklistNode: TreeNode = {
       id: checklist.id,
       name: checklist.name,
@@ -26,7 +25,7 @@ export function buildTreeFromConfig(config: ChecklistConfig[]): TreeNode[] {
 
     // Add stages
     if (checklist.stageRequests) {
-      checklistNode.children = checklist.stageRequests.map((stage, stageIndex) => {
+      checklistNode.children = checklist.stageRequests.map((stage, _stageIndex) => {
         const stageNode: TreeNode = {
           id: stage.id,
           name: stage.name,
@@ -41,7 +40,7 @@ export function buildTreeFromConfig(config: ChecklistConfig[]): TreeNode[] {
 
         // Add tasks
         if (stage.taskRequests) {
-          stageNode.children = stage.taskRequests.map((task, taskIndex) => {
+          stageNode.children = stage.taskRequests.map((task, _taskIndex) => {
             const taskNode: TreeNode = {
               id: task.id,
               name: task.name,
@@ -243,7 +242,7 @@ export function treeNodeToSelectedEntity(
   return {
     type: entityType as 'stage' | 'task' | 'parameter',
     id: node.id,
-    data: node.data,
+    data: node.data as Stage | Task,
     parent,
     path: buildPath(node),
     checklistIndex,

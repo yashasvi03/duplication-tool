@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   buildTreeFromConfig,
   treeNodeToSelectedEntity,
@@ -79,7 +79,6 @@ export default function Step2Select({ config, onEntitySelected }: Step2SelectPro
     const isExpanded = expandedNodes.has(node.id);
     const isSelected = selectedNode?.id === node.id;
     const hasChildren = node.children.length > 0;
-    const canBeSelected = node.type !== 'checklist';
 
     return (
       <div key={node.id} className="select-none">

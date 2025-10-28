@@ -118,10 +118,6 @@ export default function Step1Upload({ onJsonLoaded }: Step1UploadProps) {
     }
   }, [handleFileUpload]);
 
-  const handleValidate = useCallback(() => {
-    validateAndLoad(jsonInput);
-  }, [jsonInput, validateAndLoad]);
-
   const handleFormat = useCallback(() => {
     const formatted = formatJson(jsonInput);
     setJsonInput(formatted);

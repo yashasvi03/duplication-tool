@@ -174,7 +174,7 @@ function detectOrderTreeChanges(
  * Generate warnings based on configuration and detected issues
  */
 function generateWarnings(
-  selectedEntity: SelectedEntity,
+  _selectedEntity: SelectedEntity,
   duplicationConfig: DuplicationConfig,
   orderTreeChanges: OrderTreeChange[]
 ): Warning[] {

@@ -499,8 +499,8 @@ function insertCopies<T extends { orderTree: number }>(
  */
 function adjustOrderTrees<T extends { orderTree: number }>(
   array: T[],
-  insertIndex: number,
-  numberOfCopies: number
+  _insertIndex: number,
+  _numberOfCopies: number
 ): void {
   // Recalculate all order trees to be sequential
   array.forEach((item, index) => {

@@ -78,7 +78,7 @@ function App() {
               <span className="text-xs text-muted-foreground">Preview</span>
               <span className="text-xs text-muted-foreground">Download</span>
             </div>
-          </div>
+          </nav>
 
           {/* Main content area */}
           <div className="min-h-[400px]" role="region" aria-label="Step content">
