@@ -160,7 +160,7 @@ function generateIdMappings(
 
     checklist.actionRequests.forEach((action) => {
       // Check if this action is triggered by any of the tasks being duplicated
-      if (taskIds.includes(action.triggerEntityId)) {
+      if (taskIds.includes(String(action.triggerEntityId))) {
         // Map the action ID
         mapping.actions[action.id] = generateMultipleIds(numberOfCopies);
 
@@ -932,7 +932,7 @@ function remapChecklistActions(
       copy.id = idMapping.actions[action.id][copyIndex];
 
       // Remap triggerEntityId (task reference)
-      const newTaskId = idMapping.tasks[action.triggerEntityId]?.[copyIndex];
+      const newTaskId = idMapping.tasks[String(action.triggerEntityId)]?.[copyIndex];
       if (newTaskId) {
         copy.triggerEntityId = newTaskId;
       } else if (duplicationConfig.referenceStrategy === 'remove') {
