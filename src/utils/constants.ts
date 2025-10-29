@@ -22,6 +22,7 @@ export const DEFAULT_DUPLICATION_CONFIG: DuplicationConfig = {
     schedules: true,
     media: true,
     recurrence: true,
+    actions: true,
   },
   referenceStrategy: 'keep',
   placement: {
@@ -97,6 +98,7 @@ export const COMPONENT_LABELS = {
   schedules: 'Schedules',
   media: 'Media References',
   recurrence: 'Recurrence Patterns',
+  actions: 'Actions & Effects',
 } as const;
 
 /**
@@ -110,6 +112,7 @@ export const COMPONENT_DESCRIPTIONS = {
   schedules: 'Copy schedule configurations',
   media: 'Reference same media files in copies',
   recurrence: 'Copy recurrence pattern settings',
+  actions: 'Copy actions triggered by duplicated tasks and their effects with reference remapping',
 } as const;
 
 /**

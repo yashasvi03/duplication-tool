@@ -7,6 +7,12 @@ import type {
   SelectedEntity,
   DuplicationConfig,
   IdMapping,
+  Action,
+  Effect,
+  LexicalEditorContent,
+  LexicalNode,
+  LexicalMentionNode,
+  LexicalTextNode,
 } from '@/types';
 import { generateMultipleIds, isIdReference } from './idGeneration';
 import { generateName, deepClone, generateChildName, extractSuffixFromName } from './helpers';
@@ -22,7 +28,7 @@ export function duplicateEntity(
   const modifiedConfig = deepClone(config);
 
   // Generate all new IDs upfront
-  const idMapping = generateIdMappings(selectedEntity, duplicationConfig.numberOfCopies);
+  const idMapping = generateIdMappings(modifiedConfig, selectedEntity, duplicationConfig.numberOfCopies);
 
   // Perform duplication based on entity type
   if (selectedEntity.type === 'stage') {
@@ -60,7 +66,7 @@ export function duplicateMultipleEntities(
 
   // Generate ID mappings for all entities
   const allIdMappings: IdMapping[] = sortedEntities.map(entity =>
-    generateIdMappings(entity, duplicationConfig.numberOfCopies)
+    generateIdMappings(modifiedConfig, entity, duplicationConfig.numberOfCopies)
   );
 
   // Apply strategy-specific duplication
@@ -82,6 +88,7 @@ export function duplicateMultipleEntities(
  * Generate ID mappings for all entities that will be duplicated
  */
 function generateIdMappings(
+  config: ChecklistConfig[],
   selectedEntity: SelectedEntity,
   numberOfCopies: number
 ): IdMapping {
@@ -90,6 +97,8 @@ function generateIdMappings(
     tasks: {},
     parameters: {},
     automations: {},
+    actions: {},
+    effects: {},
   };
 
   const entity = selectedEntity.data;
@@ -142,6 +151,27 @@ function generateIdMappings(
   } else if (selectedEntity.type === 'parameter') {
     const parameter = entity as Parameter;
     mapping.parameters[parameter.id] = generateMultipleIds(numberOfCopies);
+  }
+
+  // Map action and effect IDs for actions triggered by duplicated tasks
+  const checklist = config[selectedEntity.checklistIndex];
+  if (checklist.actionRequests) {
+    const taskIds = Object.keys(mapping.tasks); // All tasks being duplicated
+
+    checklist.actionRequests.forEach((action) => {
+      // Check if this action is triggered by any of the tasks being duplicated
+      if (taskIds.includes(action.triggerEntityId)) {
+        // Map the action ID
+        mapping.actions[action.id] = generateMultipleIds(numberOfCopies);
+
+        // Map all effect IDs in this action
+        if (action.effectRequests) {
+          action.effectRequests.forEach((effect) => {
+            mapping.effects[effect.id] = generateMultipleIds(numberOfCopies);
+          });
+        }
+      }
+    });
   }
 
   return mapping;
@@ -220,6 +250,13 @@ function duplicateStage(
   if (duplicationConfig.placement.autoShift) {
     adjustOrderTrees(checklist.stageRequests, stageIndex, duplicationConfig.numberOfCopies);
   }
+
+  // Remap actions if enabled
+  if (duplicationConfig.components.actions) {
+    for (let i = 0; i < duplicationConfig.numberOfCopies; i++) {
+      remapChecklistActions(checklist, idMapping, i, duplicationConfig);
+    }
+  }
 }
 
 /**
@@ -289,6 +326,13 @@ function duplicateTask(
   // Adjust order trees if auto-shift is enabled
   if (duplicationConfig.placement.autoShift) {
     adjustOrderTrees(stage.taskRequests, taskIndex, duplicationConfig.numberOfCopies);
+  }
+
+  // Remap actions if enabled
+  if (duplicationConfig.components.actions) {
+    for (let i = 0; i < duplicationConfig.numberOfCopies; i++) {
+      remapChecklistActions(checklist, idMapping, i, duplicationConfig);
+    }
   }
 }
 
@@ -861,4 +905,176 @@ function createSingleCopy(
   }
 
   return copy;
+}
+
+/**
+ * Remap actions at checklist level
+ */
+function remapChecklistActions(
+  checklist: ChecklistConfig,
+  idMapping: IdMapping,
+  copyIndex: number,
+  duplicationConfig: DuplicationConfig
+): void {
+  if (!checklist.actionRequests || !duplicationConfig.components.actions) {
+    return;
+  }
+
+  // Collect new action copies
+  const newActions: Action[] = [];
+
+  checklist.actionRequests.forEach((action) => {
+    // Check if this action should be duplicated (is it in our mapping?)
+    if (idMapping.actions[action.id]) {
+      const copy = deepClone(action);
+
+      // Update action ID
+      copy.id = idMapping.actions[action.id][copyIndex];
+
+      // Remap triggerEntityId (task reference)
+      const newTaskId = idMapping.tasks[action.triggerEntityId]?.[copyIndex];
+      if (newTaskId) {
+        copy.triggerEntityId = newTaskId;
+      } else if (duplicationConfig.referenceStrategy === 'remove') {
+        // External task reference - skip this action
+        return;
+      }
+
+      // Remap all effects
+      if (copy.effectRequests) {
+        copy.effectRequests = copy.effectRequests.map((effect) => {
+          return remapEffect(effect, idMapping, copyIndex, duplicationConfig);
+        });
+      }
+
+      newActions.push(copy);
+    }
+  });
+
+  // Add new actions to checklist
+  checklist.actionRequests.push(...newActions);
+}
+
+/**
+ * Remap an effect
+ */
+function remapEffect(
+  effect: Effect,
+  idMapping: IdMapping,
+  copyIndex: number,
+  duplicationConfig: DuplicationConfig
+): Effect {
+  const remapped = deepClone(effect);
+
+  // Update effect ID
+  remapped.id = idMapping.effects[effect.id]?.[copyIndex] || effect.id;
+
+  // Remap references in query (if exists)
+  if (remapped.query) {
+    remapped.query = remapLexicalContent(
+      remapped.query,
+      idMapping,
+      copyIndex,
+      duplicationConfig
+    );
+  }
+
+  // Remap references in apiEndpoint (if exists)
+  if (remapped.apiEndpoint) {
+    remapped.apiEndpoint = remapLexicalContent(
+      remapped.apiEndpoint,
+      idMapping,
+      copyIndex,
+      duplicationConfig
+    );
+  }
+
+  // Remap references in apiPayload (if exists)
+  if (remapped.apiPayload) {
+    remapped.apiPayload = remapLexicalContent(
+      remapped.apiPayload,
+      idMapping,
+      copyIndex,
+      duplicationConfig
+    );
+  }
+
+  return remapped;
+}
+
+/**
+ * Remap references within Lexical Editor content
+ */
+function remapLexicalContent(
+  content: LexicalEditorContent,
+  idMapping: IdMapping,
+  copyIndex: number,
+  duplicationConfig: DuplicationConfig
+): LexicalEditorContent {
+  const remapped = deepClone(content);
+
+  function traverseLexicalNodes(
+    nodes: Array<LexicalTextNode | LexicalMentionNode>
+  ): Array<LexicalTextNode | LexicalMentionNode> {
+    return nodes.map((child) => {
+      // Check if this is a mention node
+      if (child.type === 'custom-beautifulMention') {
+        const mention = child as LexicalMentionNode;
+        const entity = mention.data.entity;
+        const oldId = mention.data.id;
+
+        let newId: string | undefined;
+
+        // Remap based on entity type
+        if (entity === 'parameter') {
+          newId = idMapping.parameters[oldId]?.[copyIndex];
+        } else if (entity === 'task') {
+          newId = idMapping.tasks[oldId]?.[copyIndex];
+        } else if (entity === 'effect') {
+          newId = idMapping.effects[oldId]?.[copyIndex];
+        } else if (entity === 'constant') {
+          // System constants don't get remapped
+          return child;
+        }
+
+        if (newId) {
+          // Internal reference - remap
+          const remappedMention = deepClone(mention);
+          remappedMention.data.id = newId;
+          return remappedMention;
+        } else if (duplicationConfig.referenceStrategy === 'remove') {
+          // External reference - replace with text node
+          return {
+            mode: 'normal',
+            text: `[REMOVED: ${mention.value}]`,
+            type: 'text',
+            style: '',
+            detail: 0,
+            format: 0,
+            version: 1,
+          } as LexicalTextNode;
+        } else {
+          // External reference - keep original
+          return child;
+        }
+      }
+      return child;
+    });
+  }
+
+  function traverseLexicalNodesRecursive(nodes: LexicalNode[]): LexicalNode[] {
+    return nodes.map((node) => {
+      if (node.children) {
+        const remappedChildren = traverseLexicalNodes(node.children);
+        return { ...node, children: remappedChildren };
+      }
+      return node;
+    });
+  }
+
+  if (remapped.root.children) {
+    remapped.root.children = traverseLexicalNodesRecursive(remapped.root.children);
+  }
+
+  return remapped;
 }

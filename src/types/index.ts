@@ -4,6 +4,7 @@ export interface ChecklistConfig {
   id: string;
   name: string;
   stageRequests: Stage[];
+  actionRequests?: Action[];
 }
 
 export interface Stage {
@@ -48,6 +49,84 @@ export interface ParameterRule {
     [key: string]: any;
   };
   [key: string]: any;
+}
+
+export interface Action {
+  id: string;
+  name: string;
+  description: string | null;
+  triggerType: string; // "COMPLETE_TASK", "START_TASK", etc.
+  triggerEntityId: string; // Task ID that triggers this action
+  successMessage: string;
+  failureMessage: string;
+  checklistId: string | null;
+  effectRequests: Effect[];
+  [key: string]: any;
+}
+
+export interface Effect {
+  id: string;
+  name: string;
+  description: string;
+  orderTree: number;
+  effectType: 'SQL_QUERY' | 'MONGO_QUERY' | 'REST_API';
+  query?: LexicalEditorContent | null;
+  apiEndpoint?: LexicalEditorContent | null;
+  apiMethod?: string | null;
+  apiHeaders?: any | null;
+  apiPayload?: LexicalEditorContent | null;
+  javascriptEnabled: boolean;
+  archived: boolean;
+  actionId: string | null;
+  [key: string]: any;
+}
+
+export interface LexicalEditorContent {
+  root: {
+    type?: string;
+    format?: string;
+    indent?: number;
+    version?: number;
+    children: LexicalNode[];
+    direction?: string;
+    textFormat?: number;
+  };
+}
+
+export interface LexicalNode {
+  type?: string;
+  format?: string;
+  indent?: number;
+  version?: number;
+  children?: Array<LexicalTextNode | LexicalMentionNode>;
+  direction?: string;
+  textStyle?: string;
+  textFormat?: number;
+}
+
+export interface LexicalTextNode {
+  mode?: string;
+  text: string;
+  type: 'text';
+  style?: string;
+  detail?: number;
+  format?: number;
+  version?: number;
+}
+
+export interface LexicalMentionNode {
+  data: {
+    id: string;
+    uuid: string;
+    entity: 'parameter' | 'task' | 'effect' | 'constant';
+    postfix?: string; // For @e references with property access
+  };
+  type: 'custom-beautifulMention';
+  value: string;
+  trigger: '@p' | '@t' | '@e' | '@s';
+  version?: number;
+  detail?: number;
+  format?: number;
 }
 
 // ==================== Application State Types ====================
@@ -107,6 +186,7 @@ export interface DuplicationConfig {
     schedules: boolean;
     media: boolean;
     recurrence: boolean;
+    actions: boolean;
   };
   referenceStrategy: 'keep' | 'remove';
   placement: {
@@ -131,6 +211,8 @@ export interface PreviewData {
     totalParameters: number;
     totalAutomations: number;
     totalRules: number;
+    totalActions: number;
+    totalEffects: number;
     totalEntities: number;
   };
   namePreview: string[];
@@ -175,6 +257,8 @@ export interface IdMapping {
   parameters: Record<string, string[]>;
   automations: Record<string, string[]>;
   stages: Record<string, string[]>;
+  actions: Record<string, string[]>;
+  effects: Record<string, string[]>;
 }
 
 // ==================== Dependency Detection Types ====================
@@ -225,6 +309,8 @@ export interface EntityCounts {
   parameters: number;
   automations: number;
   rules: number;
+  actions: number;
+  effects: number;
 }
 
 // ==================== Tree Node Types ====================

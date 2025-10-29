@@ -50,6 +50,9 @@ export function isIdKey(key: string): boolean {
     'checklistId',
     'referencedParameterId',
     'autoInitialize',
+    'actionId',
+    'effectId',
+    'triggerEntityId',
   ];
 
   return idKeys.some(k => key.toLowerCase().includes(k.toLowerCase()));

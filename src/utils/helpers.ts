@@ -211,6 +211,8 @@ export function countEntities(data: any): EntityCounts {
     parameters: 0,
     automations: 0,
     rules: 0,
+    actions: 0,
+    effects: 0,
   };
 
   if (!Array.isArray(data)) return counts;
@@ -238,6 +240,17 @@ export function countEntities(data: any): EntityCounts {
               counts.automations += task.automationRequests.length;
             }
           });
+        }
+      });
+    }
+
+    // Count actions and effects at checklist level
+    if (checklist.actionRequests) {
+      counts.actions += checklist.actionRequests.length;
+
+      checklist.actionRequests.forEach((action: any) => {
+        if (action.effectRequests) {
+          counts.effects += action.effectRequests.length;
         }
       });
     }

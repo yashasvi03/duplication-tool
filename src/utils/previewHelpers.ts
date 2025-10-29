@@ -29,6 +29,8 @@ export function generateMultiEntityPreview(
     totalParameters: modifiedCounts.parameters - originalCounts.parameters,
     totalAutomations: modifiedCounts.automations - originalCounts.automations,
     totalRules: modifiedCounts.rules - originalCounts.rules,
+    totalActions: modifiedCounts.actions - originalCounts.actions,
+    totalEffects: modifiedCounts.effects - originalCounts.effects,
     totalEntities: 0,
   };
 
@@ -36,7 +38,9 @@ export function generateMultiEntityPreview(
     summary.totalTasks +
     summary.totalParameters +
     summary.totalAutomations +
-    summary.totalRules;
+    summary.totalRules +
+    summary.totalActions +
+    summary.totalEffects;
 
   // Generate name previews for all entities (show first entity as example)
   const firstEntity = selectedEntities[0];
@@ -102,6 +106,8 @@ export function generatePreview(
     totalParameters: modifiedCounts.parameters - originalCounts.parameters,
     totalAutomations: modifiedCounts.automations - originalCounts.automations,
     totalRules: modifiedCounts.rules - originalCounts.rules,
+    totalActions: modifiedCounts.actions - originalCounts.actions,
+    totalEffects: modifiedCounts.effects - originalCounts.effects,
     totalEntities: 0,
   };
 
@@ -109,7 +115,9 @@ export function generatePreview(
     summary.totalTasks +
     summary.totalParameters +
     summary.totalAutomations +
-    summary.totalRules;
+    summary.totalRules +
+    summary.totalActions +
+    summary.totalEffects;
 
   // Generate name preview
   const entityName =

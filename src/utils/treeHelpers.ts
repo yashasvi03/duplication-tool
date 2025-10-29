@@ -93,6 +93,8 @@ function countChecklistEntities(checklist: ChecklistConfig): EntityCounts {
     parameters: 0,
     automations: 0,
     rules: 0,
+    actions: 0,
+    effects: 0,
   };
 
   if (checklist.stageRequests) {
@@ -120,6 +122,8 @@ function countStageEntities(stage: Stage): EntityCounts {
     parameters: 0,
     automations: 0,
     rules: 0,
+    actions: 0,
+    effects: 0,
   };
 
   if (stage.taskRequests) {
@@ -146,6 +150,8 @@ function countTaskEntities(task: Task): EntityCounts {
     parameters: 0,
     automations: 0,
     rules: 0,
+    actions: 0,
+    effects: 0,
   };
 
   if (task.parameterRequests) {
