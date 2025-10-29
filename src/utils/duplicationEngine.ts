@@ -169,7 +169,7 @@ function duplicateStage(
     copy.name = generateName(
       duplicationConfig.namingPattern.template,
       duplicationConfig.namingPattern.baseNameOverride || stage.name,
-      i + 1,
+      i + duplicationConfig.namingPattern.startingNumber,
       duplicationConfig.namingPattern.zeroPadding,
       duplicationConfig.namingPattern.paddingLength
     );
@@ -227,7 +227,7 @@ function duplicateTask(
     copy.name = generateName(
       duplicationConfig.namingPattern.template,
       duplicationConfig.namingPattern.baseNameOverride || task.name,
-      i + 1,
+      i + duplicationConfig.namingPattern.startingNumber,
       duplicationConfig.namingPattern.zeroPadding,
       duplicationConfig.namingPattern.paddingLength
     );
@@ -280,7 +280,7 @@ function duplicateParameter(
     copy.label = generateName(
       duplicationConfig.namingPattern.template,
       duplicationConfig.namingPattern.baseNameOverride || currentLabel,
-      i + 1,
+      i + duplicationConfig.namingPattern.startingNumber,
       duplicationConfig.namingPattern.zeroPadding,
       duplicationConfig.namingPattern.paddingLength
     );
@@ -745,7 +745,7 @@ function createSingleCopy(
   const newName = generateName(
     duplicationConfig.namingPattern.template,
     duplicationConfig.namingPattern.baseNameOverride || entityName,
-    copyIndex + 1,
+    copyIndex + duplicationConfig.namingPattern.startingNumber,
     duplicationConfig.namingPattern.zeroPadding,
     duplicationConfig.namingPattern.paddingLength
   );

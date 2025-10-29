@@ -54,7 +54,8 @@ export function generateMultiEntityPreview(
     baseName,
     Math.min(duplicationConfig.numberOfCopies, 3), // Show max 3 in preview
     duplicationConfig.namingPattern.zeroPadding,
-    duplicationConfig.namingPattern.paddingLength
+    duplicationConfig.namingPattern.paddingLength,
+    duplicationConfig.namingPattern.startingNumber
   );
 
   // Detect order tree changes (simplified for multi-entity)
@@ -125,7 +126,8 @@ export function generatePreview(
     baseName,
     duplicationConfig.numberOfCopies,
     duplicationConfig.namingPattern.zeroPadding,
-    duplicationConfig.namingPattern.paddingLength
+    duplicationConfig.namingPattern.paddingLength,
+    duplicationConfig.namingPattern.startingNumber
   );
 
   // Detect order tree changes

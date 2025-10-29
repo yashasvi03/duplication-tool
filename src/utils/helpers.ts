@@ -39,10 +39,11 @@ export function generateNames(
   baseName: string,
   count: number,
   zeroPadding: boolean = false,
-  paddingLength: number = 3
+  paddingLength: number = 3,
+  startingNumber: number = 1
 ): string[] {
   const names: string[] = [];
-  for (let i = 1; i <= count; i++) {
+  for (let i = startingNumber; i < startingNumber + count; i++) {
     names.push(generateName(pattern, baseName, i, zeroPadding, paddingLength));
   }
   return names;

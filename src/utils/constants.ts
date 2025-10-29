@@ -10,6 +10,7 @@ export const DEFAULT_DUPLICATION_CONFIG: DuplicationConfig = {
     template: '{base_name} {n}',
     zeroPadding: true,
     paddingLength: 3,
+    startingNumber: 1,
   },
   orderingStrategy: 'interleaved',
   groupingStrategy: 'relative',

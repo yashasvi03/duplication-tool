@@ -95,6 +95,7 @@ export interface DuplicationConfig {
     template: string; // e.g., "{base_name} {n}"
     zeroPadding: boolean;
     paddingLength: number;
+    startingNumber: number; // Starting value for {n}
   };
   orderingStrategy: 'interleaved' | 'sequential'; // Multi-select: how copies are ordered
   groupingStrategy?: 'relative' | 'grouped'; // Sequential only: where to place copies

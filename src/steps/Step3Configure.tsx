@@ -55,7 +55,8 @@ export default function Step3Configure({ selectedEntities, onConfigUpdated }: St
         baseName,
         Math.min(config.numberOfCopies, 3), // Show max 3 in preview
         config.namingPattern.zeroPadding,
-        config.namingPattern.paddingLength
+        config.namingPattern.paddingLength,
+        config.namingPattern.startingNumber
       );
     } catch {
       return [];
@@ -115,6 +116,15 @@ export default function Step3Configure({ selectedEntities, onConfigUpdated }: St
     if (!isNaN(num) && num >= 1 && num <= 10) {
       updateConfig({
         namingPattern: { ...config.namingPattern, paddingLength: num },
+      });
+    }
+  };
+
+  const handleStartingNumberChange = (value: string) => {
+    const num = parseInt(value);
+    if (!isNaN(num) && num >= 0) {
+      updateConfig({
+        namingPattern: { ...config.namingPattern, startingNumber: num },
       });
     }
   };
@@ -244,6 +254,23 @@ export default function Step3Configure({ selectedEntities, onConfigUpdated }: St
                 </div>
               ))}
             </RadioGroup>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="startingNumber">Starting Number</Label>
+            <Input
+              id="startingNumber"
+              type="number"
+              min="0"
+              value={config.namingPattern.startingNumber}
+              onChange={(e) => handleStartingNumberChange(e.target.value)}
+              className="w-32"
+            />
+            <p className="text-xs text-muted-foreground">
+              First copy will be numbered as {config.namingPattern.startingNumber}
+            </p>
           </div>
 
           <Separator />
