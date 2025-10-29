@@ -9,7 +9,7 @@ import type {
   IdMapping,
 } from '@/types';
 import { generateMultipleIds, isIdReference } from './idGeneration';
-import { generateName, deepClone } from './helpers';
+import { generateName, deepClone, generateChildName, extractSuffixFromName } from './helpers';
 
 /**
  * Main duplication engine - orchestrates the entire duplication process
@@ -174,6 +174,13 @@ function duplicateStage(
       duplicationConfig.namingPattern.paddingLength
     );
 
+    // Extract suffix from generated stage name for cascading to child entities
+    const stageSuffix = extractSuffixFromName(
+      copy.name,
+      duplicationConfig.namingPattern.template,
+      duplicationConfig.namingPattern.baseNameOverride || stage.name
+    );
+
     // Update ID
     copy.id = idMapping.stages[stage.id][i];
 
@@ -188,7 +195,18 @@ function duplicateStage(
     // Remap all task IDs and their contents
     if (copy.taskRequests) {
       copy.taskRequests = copy.taskRequests.map((task) => {
-        return remapTask(task, idMapping, i, duplicationConfig);
+        // Apply inherited naming to tasks if configured
+        if (stageSuffix && duplicationConfig.childNaming.tasks.applyInheritedSuffix) {
+          const originalTaskName = task.name;
+          task.name = generateChildName(
+            originalTaskName,
+            stageSuffix,
+            duplicationConfig.childNaming.tasks.suffixPrefix,
+            true
+          );
+        }
+
+        return remapTask(task, idMapping, i, duplicationConfig, stageSuffix);
       });
     }
 
@@ -211,7 +229,9 @@ function duplicateTask(
   config: ChecklistConfig[],
   selectedEntity: SelectedEntity,
   duplicationConfig: DuplicationConfig,
-  idMapping: IdMapping
+  idMapping: IdMapping,
+  inheritedSuffix?: string,
+  applyInheritance?: boolean
 ): void {
   const checklist = config[selectedEntity.checklistIndex];
   const stage = checklist.stageRequests[selectedEntity.stageIndex!];
@@ -224,16 +244,33 @@ function duplicateTask(
     const copy = deepClone(task);
 
     // Update name
-    copy.name = generateName(
+    // Use inherited naming if provided, otherwise use standard naming
+    if (inheritedSuffix && applyInheritance) {
+      copy.name = generateChildName(
+        task.name,
+        inheritedSuffix,
+        duplicationConfig.childNaming.tasks.suffixPrefix,
+        true
+      );
+    } else {
+      copy.name = generateName(
+        duplicationConfig.namingPattern.template,
+        duplicationConfig.namingPattern.baseNameOverride || task.name,
+        i + duplicationConfig.namingPattern.startingNumber,
+        duplicationConfig.namingPattern.zeroPadding,
+        duplicationConfig.namingPattern.paddingLength
+      );
+    }
+
+    // Extract suffix from generated task name for cascading to parameters
+    const taskSuffix = extractSuffixFromName(
+      copy.name,
       duplicationConfig.namingPattern.template,
-      duplicationConfig.namingPattern.baseNameOverride || task.name,
-      i + duplicationConfig.namingPattern.startingNumber,
-      duplicationConfig.namingPattern.zeroPadding,
-      duplicationConfig.namingPattern.paddingLength
+      duplicationConfig.namingPattern.baseNameOverride || task.name
     );
 
     // Remap the entire task
-    const remapped = remapTask(copy, idMapping, i, duplicationConfig);
+    const remapped = remapTask(copy, idMapping, i, duplicationConfig, taskSuffix);
 
     // Update order tree
     const insertPosition = getInsertPosition(
@@ -262,7 +299,9 @@ function duplicateParameter(
   config: ChecklistConfig[],
   selectedEntity: SelectedEntity,
   duplicationConfig: DuplicationConfig,
-  idMapping: IdMapping
+  idMapping: IdMapping,
+  inheritedSuffix?: string,
+  applyInheritance?: boolean
 ): void {
   const checklist = config[selectedEntity.checklistIndex];
   const stage = checklist.stageRequests[selectedEntity.stageIndex!];
@@ -277,13 +316,24 @@ function duplicateParameter(
 
     // Update label/name
     const currentLabel = copy.label || `Parameter ${copy.id}`;
-    copy.label = generateName(
-      duplicationConfig.namingPattern.template,
-      duplicationConfig.namingPattern.baseNameOverride || currentLabel,
-      i + duplicationConfig.namingPattern.startingNumber,
-      duplicationConfig.namingPattern.zeroPadding,
-      duplicationConfig.namingPattern.paddingLength
-    );
+
+    // Use inherited naming if provided, otherwise use standard naming
+    if (inheritedSuffix && applyInheritance) {
+      copy.label = generateChildName(
+        currentLabel,
+        inheritedSuffix,
+        duplicationConfig.childNaming.parameters.suffixPrefix,
+        true
+      );
+    } else {
+      copy.label = generateName(
+        duplicationConfig.namingPattern.template,
+        duplicationConfig.namingPattern.baseNameOverride || currentLabel,
+        i + duplicationConfig.namingPattern.startingNumber,
+        duplicationConfig.namingPattern.zeroPadding,
+        duplicationConfig.namingPattern.paddingLength
+      );
+    }
 
     // Update ID
     copy.id = idMapping.parameters[parameter.id][i];
@@ -318,7 +368,8 @@ function remapTask(
   task: Task,
   idMapping: IdMapping,
   copyIndex: number,
-  duplicationConfig: DuplicationConfig
+  duplicationConfig: DuplicationConfig,
+  taskSuffix?: string | null
 ): Task {
   // Update task ID
   task.id = idMapping.tasks[task.id]?.[copyIndex] || task.id;
@@ -328,6 +379,17 @@ function remapTask(
     task.parameterRequests = task.parameterRequests.map((param) => {
       const remapped = { ...param };
       remapped.id = idMapping.parameters[param.id]?.[copyIndex] || param.id;
+
+      // Apply inherited naming to parameter label if configured
+      if (taskSuffix && duplicationConfig.childNaming.parameters.applyInheritedSuffix) {
+        const originalLabel = param.label || `Parameter ${param.id}`;
+        remapped.label = generateChildName(
+          originalLabel,
+          taskSuffix,
+          duplicationConfig.childNaming.parameters.suffixPrefix,
+          true
+        );
+      }
 
       // Remap parameter-level references
       remapParameterReferences(remapped, idMapping, copyIndex, duplicationConfig);
@@ -756,6 +818,13 @@ function createSingleCopy(
     (copy as Stage | Task).name = newName;
   }
 
+  // Extract suffix from generated name for cascading to child entities
+  const entitySuffix = extractSuffixFromName(
+    newName,
+    duplicationConfig.namingPattern.template,
+    duplicationConfig.namingPattern.baseNameOverride || entityName
+  );
+
   // Update ID
   if (entity.type === 'stage') {
     copy.id = idMapping.stages[entity.id]?.[copyIndex] || copy.id;
@@ -770,11 +839,22 @@ function createSingleCopy(
     const stageCopy = copy as Stage;
     if (stageCopy.taskRequests) {
       stageCopy.taskRequests = stageCopy.taskRequests.map((task) => {
-        return remapTask(task, idMapping, copyIndex, duplicationConfig);
+        // Apply inherited naming to tasks if configured
+        if (entitySuffix && duplicationConfig.childNaming.tasks.applyInheritedSuffix) {
+          const originalTaskName = task.name;
+          task.name = generateChildName(
+            originalTaskName,
+            entitySuffix,
+            duplicationConfig.childNaming.tasks.suffixPrefix,
+            true
+          );
+        }
+
+        return remapTask(task, idMapping, copyIndex, duplicationConfig, entitySuffix);
       });
     }
   } else if (entity.type === 'task') {
-    const taskCopy = remapTask(copy as Task, idMapping, copyIndex, duplicationConfig);
+    const taskCopy = remapTask(copy as Task, idMapping, copyIndex, duplicationConfig, entitySuffix);
     return taskCopy;
   } else {
     remapParameterReferences(copy as Parameter, idMapping, copyIndex, duplicationConfig);

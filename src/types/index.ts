@@ -113,6 +113,16 @@ export interface DuplicationConfig {
     position: 'after' | 'before' | 'start' | 'end';
     autoShift: boolean;
   };
+  childNaming: {
+    tasks: {
+      applyInheritedSuffix: boolean;
+      suffixPrefix: string;
+    };
+    parameters: {
+      applyInheritedSuffix: boolean;
+      suffixPrefix: string;
+    };
+  };
 }
 
 export interface PreviewData {

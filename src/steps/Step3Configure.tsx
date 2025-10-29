@@ -63,6 +63,32 @@ export default function Step3Configure({ selectedEntities, onConfigUpdated }: St
     }
   }, [config, baseName]);
 
+  // Get example child entity name for preview
+  const getChildEntityName = (entityType: 'task' | 'parameter'): string => {
+    if (entityType === 'task' && firstEntity.type === 'stage') {
+      const stageData = firstEntity.data as any;
+      if (stageData.taskRequests && stageData.taskRequests.length > 0) {
+        return stageData.taskRequests[0].name || 'Task';
+      }
+    } else if (entityType === 'parameter') {
+      if (firstEntity.type === 'stage') {
+        const stageData = firstEntity.data as any;
+        if (stageData.taskRequests && stageData.taskRequests.length > 0) {
+          const firstTask = stageData.taskRequests[0];
+          if (firstTask.parameterRequests && firstTask.parameterRequests.length > 0) {
+            return firstTask.parameterRequests[0].label || 'Parameter';
+          }
+        }
+      } else if (firstEntity.type === 'task') {
+        const taskData = firstEntity.data as any;
+        if (taskData.parameterRequests && taskData.parameterRequests.length > 0) {
+          return taskData.parameterRequests[0].label || 'Parameter';
+        }
+      }
+    }
+    return entityType === 'task' ? 'Task' : 'Parameter';
+  };
+
   const updateConfig = (updates: Partial<DuplicationConfig>) => {
     const newConfig = { ...config, ...updates };
     setConfig(newConfig);
@@ -159,10 +185,62 @@ export default function Step3Configure({ selectedEntities, onConfigUpdated }: St
     updateConfig({ groupingStrategy: strategy });
   };
 
+  const handleChildNamingToggle = (entity: 'tasks' | 'parameters', checked: boolean) => {
+    updateConfig({
+      childNaming: {
+        ...config.childNaming,
+        [entity]: {
+          ...config.childNaming[entity],
+          applyInheritedSuffix: checked,
+        },
+      },
+    });
+  };
+
+  const handleChildNamingPrefixChange = (entity: 'tasks' | 'parameters', prefix: string) => {
+    updateConfig({
+      childNaming: {
+        ...config.childNaming,
+        [entity]: {
+          ...config.childNaming[entity],
+          suffixPrefix: prefix,
+        },
+      },
+    });
+  };
+
+  // Count child entities in selection
+  const childEntityCounts = useMemo(() => {
+    let tasks = 0;
+    let parameters = 0;
+
+    selectedEntities.forEach((entity) => {
+      if (entity.type === 'stage') {
+        const stageData = entity.data as any;
+        if (stageData.taskRequests) {
+          tasks += stageData.taskRequests.length;
+          stageData.taskRequests.forEach((task: any) => {
+            if (task.parameterRequests) {
+              parameters += task.parameterRequests.length;
+            }
+          });
+        }
+      } else if (entity.type === 'task') {
+        const taskData = entity.data as any;
+        if (taskData.parameterRequests) {
+          parameters += taskData.parameterRequests.length;
+        }
+      }
+    });
+
+    return { tasks, parameters };
+  }, [selectedEntities]);
+
   // Conditionally show placement and grouping based on ordering strategy
   const showGroupingStrategy = config.orderingStrategy === 'sequential';
   const showPlacement = config.orderingStrategy === 'sequential';
   const showMultiSelectInfo = selectedEntities.length > 1;
+  const showChildNaming = firstEntity.type === 'stage' || firstEntity.type === 'task';
 
   return (
     <div className="space-y-6">
@@ -323,6 +401,120 @@ export default function Step3Configure({ selectedEntities, onConfigUpdated }: St
           </div>
         </CardContent>
       </Card>
+
+      {/* Child Entity Naming */}
+      {showChildNaming && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Child Entity Naming (Advanced)</CardTitle>
+            <CardDescription>
+              Optionally cascade parent suffix to child entities
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Tasks naming (only for stages) */}
+            {firstEntity.type === 'stage' && childEntityCounts.tasks > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="applyToTasks"
+                    checked={config.childNaming.tasks.applyInheritedSuffix}
+                    onCheckedChange={(checked) => handleChildNamingToggle('tasks', checked as boolean)}
+                  />
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="applyToTasks" className="cursor-pointer">
+                      Apply suffix to child tasks <Badge variant="secondary">{childEntityCounts.tasks} found</Badge>
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Child tasks will inherit the parent stage's suffix number
+                    </p>
+
+                    {config.childNaming.tasks.applyInheritedSuffix && (
+                      <div className="space-y-2 pt-2">
+                        <Label htmlFor="taskPrefix" className="text-sm">
+                          Prefix text (optional)
+                        </Label>
+                        <Input
+                          id="taskPrefix"
+                          placeholder="e.g., Lot, Batch, Run"
+                          value={config.childNaming.tasks.suffixPrefix}
+                          onChange={(e) => handleChildNamingPrefixChange('tasks', e.target.value)}
+                          className="max-w-xs"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Optional text before the number
+                        </p>
+
+                        {/* Preview */}
+                        {namePreview.length > 0 && (
+                          <div className="mt-3 p-3 bg-muted rounded-md">
+                            <p className="text-xs font-medium mb-1">Preview:</p>
+                            <p className="text-xs text-muted-foreground">
+                              "{getChildEntityName('task')}" → "{getChildEntityName('task')}{config.childNaming.tasks.suffixPrefix ? ' ' + config.childNaming.tasks.suffixPrefix.trim() : ''}{namePreview[0].replace(baseName, '').trim()}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Parameters naming */}
+            {(firstEntity.type === 'stage' || firstEntity.type === 'task') && childEntityCounts.parameters > 0 && (
+              <>
+                {firstEntity.type === 'stage' && childEntityCounts.tasks > 0 && <Separator />}
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="applyToParameters"
+                      checked={config.childNaming.parameters.applyInheritedSuffix}
+                      onCheckedChange={(checked) => handleChildNamingToggle('parameters', checked as boolean)}
+                    />
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="applyToParameters" className="cursor-pointer">
+                        Apply suffix to child parameters <Badge variant="secondary">{childEntityCounts.parameters} found</Badge>
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Child parameters will inherit the parent {firstEntity.type}'s suffix number
+                      </p>
+
+                      {config.childNaming.parameters.applyInheritedSuffix && (
+                        <div className="space-y-2 pt-2">
+                          <Label htmlFor="parameterPrefix" className="text-sm">
+                            Prefix text (optional)
+                          </Label>
+                          <Input
+                            id="parameterPrefix"
+                            placeholder="e.g., Lot, Batch, Run"
+                            value={config.childNaming.parameters.suffixPrefix}
+                            onChange={(e) => handleChildNamingPrefixChange('parameters', e.target.value)}
+                            className="max-w-xs"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Optional text before the number
+                          </p>
+
+                          {/* Preview */}
+                          {namePreview.length > 0 && (
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <p className="text-xs font-medium mb-1">Preview:</p>
+                              <p className="text-xs text-muted-foreground">
+                                "{getChildEntityName('parameter')}" → "{getChildEntityName('parameter')}{config.childNaming.parameters.suffixPrefix ? ' ' + config.childNaming.parameters.suffixPrefix.trim() : ''}{namePreview[0].replace(baseName, '').trim()}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Components to Include */}
       <Card>

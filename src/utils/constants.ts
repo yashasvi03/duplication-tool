@@ -28,6 +28,16 @@ export const DEFAULT_DUPLICATION_CONFIG: DuplicationConfig = {
     position: 'after',
     autoShift: true,
   },
+  childNaming: {
+    tasks: {
+      applyInheritedSuffix: false,
+      suffixPrefix: '',
+    },
+    parameters: {
+      applyInheritedSuffix: false,
+      suffixPrefix: '',
+    },
+  },
 };
 
 /**

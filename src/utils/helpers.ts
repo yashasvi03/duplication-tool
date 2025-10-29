@@ -50,6 +50,65 @@ export function generateNames(
 }
 
 /**
+ * Extract the numeric suffix from a generated name
+ * Handles both padded (001) and non-padded (1) numbers
+ */
+export function extractSuffixFromName(
+  generatedName: string,
+  pattern: string,
+  baseName: string
+): string | null {
+  try {
+    // Replace {base_name} with actual base name to get the pattern structure
+    const patternWithBase = pattern.replace('{base_name}', baseName);
+
+    // Find where {n} would be in the pattern
+    const nIndex = pattern.indexOf('{n}');
+    if (nIndex === -1) return null;
+
+    // Get the prefix and suffix around {n}
+    const beforeN = patternWithBase.substring(0, nIndex);
+    const afterN = patternWithBase.substring(nIndex + 3); // 3 is length of '{n}'
+
+    // Find the number in the generated name
+    if (!generatedName.startsWith(beforeN)) return null;
+
+    let numberPart = generatedName.substring(beforeN.length);
+    if (afterN && numberPart.endsWith(afterN)) {
+      numberPart = numberPart.substring(0, numberPart.length - afterN.length);
+    }
+
+    // Validate it's a number
+    if (!/^\d+$/.test(numberPart)) return null;
+
+    return numberPart;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Generate a child entity name with inherited suffix and optional prefix
+ */
+export function generateChildName(
+  originalName: string,
+  parentSuffix: string,
+  prefix: string,
+  applyInheritance: boolean
+): string {
+  if (!applyInheritance) {
+    return originalName;
+  }
+
+  // Construct: originalName + prefix + suffix
+  // Handle spacing intelligently
+  const trimmedPrefix = prefix.trim();
+  const spacing = trimmedPrefix ? ' ' : '';
+
+  return `${originalName}${spacing}${prefix}${parentSuffix}`;
+}
+
+/**
  * Get file size in human-readable format
  */
 export function formatFileSize(bytes: number): string {
