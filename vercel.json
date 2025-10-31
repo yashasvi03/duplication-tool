@@ -1,0 +1,7 @@
+{
+  "alias": ["mes-duplication-tool.vercel.app"],
+  "github": {
+    "enabled": true,
+    "autoAlias": true
+  }
+}
