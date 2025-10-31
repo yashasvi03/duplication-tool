@@ -47,6 +47,7 @@ export const DEFAULT_DUPLICATION_CONFIG: DuplicationConfig = {
  */
 export const NAMING_PATTERNS = [
   { label: '{base_name} {n}', value: '{base_name} {n}' },
+  { label: '{base_name}{n}', value: '{base_name}{n}' },
   { label: '{base_name} - Copy {n}', value: '{base_name} - Copy {n}' },
   { label: '{base_name} ({n})', value: '{base_name} ({n})' },
   { label: '{base_name}_{n}', value: '{base_name}_{n}' },
