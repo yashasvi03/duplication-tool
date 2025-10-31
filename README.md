@@ -12,6 +12,7 @@ A standalone React + TypeScript web application for duplicating stages, tasks, o
 - **Smart Reference Handling**: Internal references are remapped, external references can be kept or removed
   - Supports automations, linked parameters, parameter rules, filters & validations
   - Actions & effects with Lexical editor support (@t, @p, @e, @s references)
+  - Calculation parameters with variable reference remapping (taskId, parameterId)
 - **Advanced Naming Options**:
   - Custom naming patterns with `{base_name}` and `{n}` variables
   - Configurable starting number (start from any number, not just 1)
@@ -24,7 +25,7 @@ A standalone React + TypeScript web application for duplicating stages, tasks, o
 - **Live Preview**: See exactly what will be created before execution
 - **Flexible Configuration**:
   - Create 1-100 copies
-  - Component selection (automations, parameters, rules, actions, schedules, media, recurrence)
+  - Component selection (automations, parameters, rules, actions, calculations, schedules, media, recurrence)
   - Placement options (before/after/start/end)
   - Reference strategy (keep or remove external references)
 - **Client-Side Only**: No backend required, runs entirely in browser
@@ -131,6 +132,7 @@ Configure how duplication should work:
 - Automations, Linked Parameters, Parameter Rules
 - Filters & Validations, Schedules, Media, Recurrence
 - Actions & Effects (with Lexical editor reference remapping)
+- Calculation Parameters (with variable reference remapping)
 
 **Reference Handling**:
 - **Keep**: Preserve external references (recommended)
@@ -175,9 +177,34 @@ The duplication engine intelligently handles references across different compone
 ### Standard ID References
 - **Internal References**: IDs within the selected scope are remapped to new copies
 - **External References**: IDs outside the scope are kept or removed based on user preference
-- **Supported Components**: Automations, linked parameters, parameter rules, filters & validations
+- **Supported Components**: Automations, linked parameters, parameter rules, filters & validations, calculation parameters
 
 Example: When duplicating a task that references a parameter in the same task, the reference is automatically updated to point to the duplicated parameter.
+
+### Calculation Parameters
+Calculation parameters store references in a structured `data.variables` object:
+
+```json
+{
+  "type": "CALCULATION",
+  "data": {
+    "variables": {
+      "CR": {
+        "taskId": "666951402617892871",
+        "parameterId": "666951402634670085"
+      }
+    },
+    "expression": "QS-CR"
+  }
+}
+```
+
+- **Internal References**: If `taskId` and `parameterId` are within the duplication scope, both IDs are remapped
+- **External References**: Variables referencing external tasks/parameters:
+  - **Keep strategy**: Original IDs preserved
+  - **Remove strategy**: Variable removed from calculation
+- **Smart Detection**: Uses existing `isIdReference()` logic to automatically detect ID fields
+- **Scope Determination**: Parameters in the same task = internal; different task = external
 
 ### Actions & Effects (Lexical Editor Support)
 Actions and effects use a Lexical editor format with special mention patterns:
@@ -368,6 +395,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
   - REST API endpoints and payloads
 - Reference remapping for @t, @p, @e, @s mention patterns
 - Handles numeric triggerEntityId values from MES backend
+
+**Calculation Parameters Support** (v1.4.0)
+- Full support for CALCULATION type parameters with variable reference remapping
+- Smart detection of `taskId` and `parameterId` in `data.variables` object
+- Internal/external reference classification based on task scope
+- User-configurable component toggle in Step 3 Configure
+- Leverages existing smart ID detection system (`isIdReference()`)
+- Reference strategy support: keep or remove external variable references
 
 **Enhanced Reference Remapping** (v1.0.1)
 - Filters & Validations reference remapping for parameters

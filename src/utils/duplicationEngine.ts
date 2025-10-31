@@ -538,6 +538,16 @@ function remapParameterReferences(
       duplicationConfig
     );
   }
+
+  // Remap calculation parameter variables if present
+  if (parameter.type === 'CALCULATION' && parameter.data?.variables && duplicationConfig.components.calculations) {
+    parameter.data.variables = remapJsonField(
+      parameter.data.variables,
+      idMapping,
+      copyIndex,
+      duplicationConfig
+    );
+  }
 }
 
 /**

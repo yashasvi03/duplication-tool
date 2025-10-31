@@ -23,6 +23,7 @@ export const DEFAULT_DUPLICATION_CONFIG: DuplicationConfig = {
     media: true,
     recurrence: true,
     actions: true,
+    calculations: true,
   },
   referenceStrategy: 'keep',
   placement: {
@@ -99,6 +100,7 @@ export const COMPONENT_LABELS = {
   media: 'Media References',
   recurrence: 'Recurrence Patterns',
   actions: 'Actions & Effects',
+  calculations: 'Calculation Parameters',
 } as const;
 
 /**
@@ -113,6 +115,7 @@ export const COMPONENT_DESCRIPTIONS = {
   media: 'Reference same media files in copies',
   recurrence: 'Copy recurrence pattern settings',
   actions: 'Copy actions triggered by duplicated tasks and their effects with reference remapping',
+  calculations: 'Remap calculation parameter variable references (taskId, parameterId)',
 } as const;
 
 /**

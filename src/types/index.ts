@@ -51,6 +51,21 @@ export interface ParameterRule {
   [key: string]: any;
 }
 
+export interface CalculationVariable {
+  label: string | null;
+  taskId: string;
+  parameterId: string;
+}
+
+export interface CalculationData {
+  uom?: string;
+  precision?: number;
+  variables: {
+    [key: string]: CalculationVariable;
+  };
+  expression: string;
+}
+
 export interface Action {
   id: string;
   name: string;
@@ -187,6 +202,7 @@ export interface DuplicationConfig {
     media: boolean;
     recurrence: boolean;
     actions: boolean;
+    calculations: boolean;
   };
   referenceStrategy: 'keep' | 'remove';
   placement: {
