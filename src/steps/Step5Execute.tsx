@@ -63,6 +63,7 @@ export default function Step5Execute({
     totalTasks: modifiedCounts.tasks - originalCounts.tasks,
     totalParameters: modifiedCounts.parameters - originalCounts.parameters,
     totalAutomations: modifiedCounts.automations - originalCounts.automations,
+    totalActions: modifiedCounts.actions - originalCounts.actions,
     totalRules: modifiedCounts.rules - originalCounts.rules,
   };
 
@@ -70,6 +71,7 @@ export default function Step5Execute({
     statistics.totalTasks +
     statistics.totalParameters +
     statistics.totalAutomations +
+    statistics.totalActions +
     statistics.totalRules;
 
   const firstEntity = selectedEntities[0];
@@ -123,9 +125,9 @@ export default function Step5Execute({
             <CardContent className="space-y-4">
               <Separator className="bg-green-200" />
 
-              <div>
+                <div>
                 <div className="text-sm font-medium text-green-900 mb-3">Summary:</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div className="bg-white rounded-lg p-3 text-center border border-green-200">
                     <div className="text-2xl font-bold text-green-600">
                       {statistics.totalTasks}
@@ -143,6 +145,12 @@ export default function Step5Execute({
                       {statistics.totalAutomations}
                     </div>
                     <div className="text-xs text-green-700">Automations</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 text-center border border-green-200">
+                    <div className="text-2xl font-bold text-green-600">
+                      {statistics.totalActions}
+                    </div>
+                    <div className="text-xs text-green-700">Actions</div>
                   </div>
                   <div className="bg-white rounded-lg p-3 text-center border border-green-200">
                     <div className="text-2xl font-bold text-green-600">
