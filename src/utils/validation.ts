@@ -4,6 +4,7 @@ import type {
   ConfigValidationError,
   DuplicationConfig,
 } from '@/types';
+import { safeJSONParse, validateIDTypes } from './jsonSanitizer';
 
 /**
  * Validate JSON string format
@@ -24,7 +25,19 @@ export function validateJsonFormat(input: string): {
   }
 
   try {
-    const parsed = JSON.parse(input);
+    const parsed = safeJSONParse(input);
+    
+    // Optional: Validate ID types in development
+    if (process.env.NODE_ENV === 'development') {
+      const issues = validateIDTypes(parsed);
+      if (issues.length > 0) {
+        console.warn('⚠️ Numeric ID fields detected (converted to strings):', issues.slice(0, 5));
+        if (issues.length > 5) {
+          console.warn(`... and ${issues.length - 5} more`);
+        }
+      }
+    }
+    
     return { valid: true, parsed };
   } catch (e) {
     const error = e as Error;

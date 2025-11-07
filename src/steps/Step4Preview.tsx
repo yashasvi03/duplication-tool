@@ -138,6 +138,14 @@ export default function Step4Preview({
                   <div className="text-xs text-muted-foreground">Automations</div>
                 </div>
               )}
+              {previewData.summary.totalActions > 0 && (
+                <div className="text-center p-3 rounded-lg bg-muted">
+                  <div className="text-2xl font-bold text-teal-600">
+                    {previewData.summary.totalActions}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Actions</div>
+                </div>
+              )}
               {previewData.summary.totalRules > 0 && (
                 <div className="text-center p-3 rounded-lg bg-muted">
                   <div className="text-2xl font-bold text-orange-600">
