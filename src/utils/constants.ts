@@ -51,6 +51,9 @@ export const NAMING_PATTERNS = [
   { label: '{base_name} - Copy {n}', value: '{base_name} - Copy {n}' },
   { label: '{base_name} ({n})', value: '{base_name} ({n})' },
   { label: '{base_name}_{n}', value: '{base_name}_{n}' },
+  { label: '{n} {base_name}', value: '{n} {base_name}' },
+  { label: '{n}.{base_name}', value: '{n}.{base_name}' },
+  { label: '{n}_{base_name}', value: '{n}_{base_name}' },
 ];
 
 /**

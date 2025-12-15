@@ -5,6 +5,7 @@ import Step4Preview from './steps/Step4Preview'
 import Step5Execute from './steps/Step5Execute'
 import { Button } from './components/ui/button'
 import { useAppContext } from './contexts/AppContext'
+import { ModeToggle } from './components/mode-toggle'
 
 function App() {
   // Use context for all state and actions
@@ -29,13 +30,16 @@ function App() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4">
-        <header className="mb-8" role="banner">
-          <h1 className="text-3xl font-bold text-foreground">
-            MES Duplication Tool
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Duplicate stages, tasks, or parameters in manufacturing execution system workflows
-          </p>
+        <header className="mb-8 flex justify-between items-center" role="banner">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              MES Duplication Tool
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Duplicate stages, tasks, or parameters in manufacturing execution system workflows
+            </p>
+          </div>
+          <ModeToggle />
         </header>
 
         <div className="bg-card rounded-lg shadow-lg p-6" role="main">
@@ -45,18 +49,16 @@ function App() {
               {[1, 2, 3, 4, 5].map((step) => (
                 <div
                   key={step}
-                  className={`flex items-center ${
-                    step < 5 ? 'flex-1' : ''
-                  }`}
+                  className={`flex items-center ${step < 5 ? 'flex-1' : ''
+                    }`}
                 >
                   <div
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                      step === currentStep
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : step < currentStep
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${step === currentStep
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : step < currentStep
                         ? 'border-primary bg-primary text-primary-foreground'
                         : 'border-muted-foreground text-muted-foreground'
-                    }`}
+                      }`}
                     aria-current={step === currentStep ? 'step' : undefined}
                     aria-label={`Step ${step}${step === currentStep ? ' (current)' : step < currentStep ? ' (completed)' : ''}`}
                   >
@@ -64,9 +66,8 @@ function App() {
                   </div>
                   {step < 5 && (
                     <div
-                      className={`flex-1 h-0.5 mx-2 ${
-                        step < currentStep ? 'bg-primary' : 'bg-muted'
-                      }`}
+                      className={`flex-1 h-0.5 mx-2 ${step < currentStep ? 'bg-primary' : 'bg-muted'
+                        }`}
                     />
                   )}
                 </div>
@@ -86,10 +87,10 @@ function App() {
             <h2 className="text-xl font-semibold mb-6" id="step-heading">
               Step {currentStep}: {
                 currentStep === 1 ? 'Upload JSON Configuration' :
-                currentStep === 2 ? 'Select Entity to Duplicate' :
-                currentStep === 3 ? 'Configure Duplication Options' :
-                currentStep === 4 ? 'Preview Changes' :
-                'Execute & Download'
+                  currentStep === 2 ? 'Select Entity to Duplicate' :
+                    currentStep === 3 ? 'Configure Duplication Options' :
+                      currentStep === 4 ? 'Preview Changes' :
+                        'Execute & Download'
               }
             </h2>
 

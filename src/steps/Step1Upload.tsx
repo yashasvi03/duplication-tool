@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import JSZip from 'jszip';
 import { Upload, FileJson, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import {
 import { formatJson, recentFilesStorage, formatFileSize, getTimeAgo } from '@/utils/helpers';
 import { MAX_FILE_SIZE_BYTES } from '@/utils/constants';
 import type { ChecklistConfig, RecentFile } from '@/types';
+import { useAppActions } from '@/contexts/AppContext';
 
 interface Step1UploadProps {
   onJsonLoaded: (json: string, parsed: ChecklistConfig[]) => void;
@@ -26,6 +28,7 @@ export default function Step1Upload({ onJsonLoaded }: Step1UploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>(recentFilesStorage.get());
+  const { setMediaFiles, setIsZipFile } = useAppActions();
 
   const validateAndLoad = useCallback((content: string) => {
     setError(null);
@@ -65,10 +68,18 @@ export default function Step1Upload({ onJsonLoaded }: Step1UploadProps) {
       return;
     }
 
-    if (!file.name.endsWith('.json')) {
-      setError('Please upload a .json file');
+    if (!file.name.endsWith('.json') && !file.name.endsWith('.zip')) {
+      setError('Please upload a .json or .zip file');
       return;
     }
+
+    if (file.name.endsWith('.zip')) {
+      handleZipUpload(file);
+      setIsZipFile(true);
+      return;
+    }
+
+    setIsZipFile(false);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -90,7 +101,64 @@ export default function Step1Upload({ onJsonLoaded }: Step1UploadProps) {
       setError('Failed to read file');
     };
     reader.readAsText(file);
-  }, [validateAndLoad]);
+  }, [validateAndLoad, setRecentFiles, setIsZipFile]);
+
+  const handleZipUpload = useCallback(async (file: File) => {
+    try {
+      const zip = new JSZip();
+      const content = await zip.loadAsync(file);
+
+      // Find the JSON file (assuming there's one main config file)
+      const jsonFiles = Object.keys(content.files).filter(name =>
+        name.endsWith('.json') && !name.startsWith('__MACOSX') && !name.startsWith('.')
+      );
+
+      if (jsonFiles.length === 0) {
+        setError('No JSON configuration file found in the ZIP archive');
+        return;
+      }
+
+      // If multiple, try to find one that looks like a config, or just take the first one
+      // For now, let's take the first one or prioritize 'configuration.json' if it exists
+      const mainJsonPath = jsonFiles.find(name => name.includes('configuration')) || jsonFiles[0];
+
+      const jsonContent = await content.files[mainJsonPath].async('string');
+
+      // Extract other files as blobs
+      const mediaFiles: Record<string, Blob> = {};
+      const processingPromises = Object.keys(content.files).map(async (fileName) => {
+        if (!content.files[fileName].dir && fileName !== mainJsonPath && !fileName.startsWith('__MACOSX') && !fileName.startsWith('.')) {
+          const blob = await content.files[fileName].async('blob');
+          mediaFiles[fileName] = blob;
+        }
+      });
+
+      await Promise.all(processingPromises);
+
+      // Set media files in context
+      setMediaFiles(mediaFiles);
+
+      // Process JSON
+      setJsonInput(jsonContent);
+      validateAndLoad(jsonContent);
+
+      // Add to recent files (as a "virtual" json file for now, or we need to update RecentFile to support zip)
+      // Since RecentFile stores content, we can store the JSON content. 
+      // Re-uploading from recent won't restore the zip media, which is a limitation but acceptable for now.
+      const recentFile: RecentFile = {
+        name: file.name + ' (extracted JSON)',
+        content: jsonContent,
+        timestamp: Date.now(),
+        size: file.size,
+      };
+      recentFilesStorage.add(recentFile);
+      setRecentFiles(recentFilesStorage.get());
+
+    } catch (err) {
+      console.error(err);
+      setError('Failed to process ZIP file');
+    }
+  }, [validateAndLoad, setMediaFiles]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -125,14 +193,17 @@ export default function Step1Upload({ onJsonLoaded }: Step1UploadProps) {
 
   const handleLoadRecent = useCallback((file: RecentFile) => {
     setJsonInput(file.content);
+    // Recent files are only JSON content for now, so treat as not ZIP unless we store metadata
+    setIsZipFile(false);
     validateAndLoad(file.content);
-  }, [validateAndLoad]);
+  }, [validateAndLoad, setIsZipFile]);
 
   const handlePasteValidate = useCallback(() => {
     if (jsonInput.trim()) {
+      setIsZipFile(false);
       validateAndLoad(jsonInput);
     }
-  }, [jsonInput, validateAndLoad]);
+  }, [jsonInput, validateAndLoad, setIsZipFile]);
 
   return (
     <div className="space-y-6">
@@ -147,7 +218,7 @@ export default function Step1Upload({ onJsonLoaded }: Step1UploadProps) {
             <CardHeader>
               <CardTitle>Upload JSON Configuration</CardTitle>
               <CardDescription>
-                Drop your MES configuration file here or click to browse
+                Drop your MES configuration file (.json or .zip) here or click to browse
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -156,15 +227,14 @@ export default function Step1Upload({ onJsonLoaded }: Step1UploadProps) {
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
-                  dragActive
-                    ? 'border-primary bg-primary/5'
-                    : 'border-muted-foreground/25 hover:border-primary/50'
-                }`}
+                className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${dragActive
+                  ? 'border-primary bg-primary/5'
+                  : 'border-muted-foreground/25 hover:border-primary/50'
+                  }`}
               >
                 <input
                   type="file"
-                  accept=".json"
+                  accept=".json,.zip"
                   onChange={handleFileInput}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
@@ -175,7 +245,7 @@ export default function Step1Upload({ onJsonLoaded }: Step1UploadProps) {
                     and drop
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    JSON files up to 50MB
+                    JSON or ZIP files up to 50MB
                   </div>
                 </div>
               </div>
