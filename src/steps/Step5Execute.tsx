@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Download, CheckCircle2, FileJson, RefreshCw, Repeat } from 'lucide-react';
+import JSZip from 'jszip';
+import { Download, CheckCircle2, FileJson, RefreshCw, Repeat, FileArchive } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -7,7 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { downloadFile, formatFileSize, formatDateTime, countEntities } from '@/utils/helpers';
+
 import type { ChecklistConfig, DuplicationConfig, SelectedEntity } from '@/types';
+import { useAppState } from '@/contexts/AppContext';
 
 interface Step5ExecuteProps {
   originalConfig: ChecklistConfig[];
@@ -28,7 +31,11 @@ export default function Step5Execute({
 }: Step5ExecuteProps) {
   const [progress, setProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+
   const [downloadedFileName, setDownloadedFileName] = useState<string | null>(null);
+  const { mediaFiles, isZipFile } = useAppState();
+  const hasMediaFiles = Object.keys(mediaFiles).length > 0;
+  const shouldDownloadZip = hasMediaFiles || isZipFile;
 
   // Simulate execution progress (since actual duplication already happened in preview)
   useEffect(() => {
@@ -46,14 +53,49 @@ export default function Step5Execute({
     return () => clearInterval(interval);
   }, []);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const modifiedJson = JSON.stringify(modifiedConfig, null, 2);
     const originalFileName = 'configuration';
     const timestamp = Date.now();
-    const fileName = `${originalFileName}_MODIFIED_${timestamp}.json`;
 
-    downloadFile(modifiedJson, fileName, 'application/json');
-    setDownloadedFileName(fileName);
+    if (shouldDownloadZip) {
+      // Create ZIP
+      const fileName = `${originalFileName}_MODIFIED_${timestamp}.zip`;
+      const zip = new JSZip();
+
+      // Add modified JSON
+      // Try to find the original JSON name if we want to be fancy, but standard name is fine
+      zip.file(`${originalFileName}_MODIFIED.json`, modifiedJson);
+
+      // Add media files
+      Object.entries(mediaFiles).forEach(([path, blob]) => {
+        zip.file(path, blob);
+      });
+
+      // Generate Blob
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+      // Download
+      // We can use the existing downloadFile utility if we cast blob to any or update utility, 
+      // but downloadFile takes string content typically.
+      // Let's create a temporary object URL for the blob
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setDownloadedFileName(fileName);
+
+    } else {
+      // Standard JSON download
+      const fileName = `${originalFileName}_MODIFIED_${timestamp}.json`;
+      downloadFile(modifiedJson, fileName, 'application/json');
+      setDownloadedFileName(fileName);
+    }
   };
 
   const originalCounts = countEntities(originalConfig);
@@ -79,8 +121,8 @@ export default function Step5Execute({
     firstEntity.type === 'stage'
       ? (firstEntity.data as any).name
       : firstEntity.type === 'task'
-      ? (firstEntity.data as any).name
-      : (firstEntity.data as any).label || 'Entity';
+        ? (firstEntity.data as any).name
+        : (firstEntity.data as any).label || 'Entity';
 
   const modifiedJsonSize = new Blob([JSON.stringify(modifiedConfig)]).size;
 
@@ -125,7 +167,7 @@ export default function Step5Execute({
             <CardContent className="space-y-4">
               <Separator className="bg-green-200" />
 
-                <div>
+              <div>
                 <div className="text-sm font-medium text-green-900 mb-3">Summary:</div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div className="bg-white rounded-lg p-3 text-center border border-green-200">
@@ -186,9 +228,15 @@ export default function Step5Execute({
                 <>
                   <div className="flex items-center justify-between p-4 rounded-lg bg-muted">
                     <div className="flex items-center gap-3">
-                      <FileJson className="h-8 w-8 text-blue-600" />
+                      {shouldDownloadZip ? (
+                        <FileArchive className="h-8 w-8 text-blue-600" />
+                      ) : (
+                        <FileJson className="h-8 w-8 text-blue-600" />
+                      )}
                       <div>
-                        <div className="font-semibold">configuration_MODIFIED.json</div>
+                        <div className="font-semibold">
+                          {shouldDownloadZip ? 'configuration_package_MODIFIED.zip' : 'configuration_MODIFIED.json'}
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {formatFileSize(modifiedJsonSize)} • {formatDateTime(Date.now())}
                         </div>
@@ -197,8 +245,8 @@ export default function Step5Execute({
                   </div>
 
                   <Button onClick={handleDownload} size="lg" className="w-full">
-                    <Download className="mr-2 h-5 w-5" />
-                    Download Modified JSON
+                    {shouldDownloadZip ? <FileArchive className="mr-2 h-5 w-5" /> : <Download className="mr-2 h-5 w-5" />}
+                    {shouldDownloadZip ? 'Download ZIP Package' : 'Download Modified JSON'}
                   </Button>
                 </>
               ) : (

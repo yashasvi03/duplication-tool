@@ -14,6 +14,8 @@ interface AppState {
   selectedEntities: SelectedEntity[]; // Changed from single entity to array
   duplicationConfig: DuplicationConfig | null;
   modifiedConfig: ChecklistConfig[] | null;
+  mediaFiles: Record<string, Blob>; // Store media files by path
+  isZipFile: boolean; // Track if the input was a ZIP file
 }
 
 /**
@@ -46,6 +48,8 @@ interface AppActions {
   setSelectedEntities: (entities: SelectedEntity[]) => void;
   setDuplicationConfig: (config: DuplicationConfig | null) => void;
   setModifiedConfig: (config: ChecklistConfig[] | null) => void;
+  setMediaFiles: (files: Record<string, Blob>) => void;
+  setIsZipFile: (isZip: boolean) => void;
 }
 
 /**
@@ -76,6 +80,8 @@ export function AppProvider({ children }: AppProviderProps) {
   const [selectedEntities, setSelectedEntities] = useState<SelectedEntity[]>([]);
   const [duplicationConfig, setDuplicationConfig] = useState<DuplicationConfig | null>(null);
   const [modifiedConfig, setModifiedConfig] = useState<ChecklistConfig[] | null>(null);
+  const [mediaFiles, setMediaFilesState] = useState<Record<string, Blob>>({});
+  const [isZipFile, setIsZipFileState] = useState(false);
 
   // Navigation Actions
   const goToStep = (step: 1 | 2 | 3 | 4 | 5) => {
@@ -106,6 +112,14 @@ export function AppProvider({ children }: AppProviderProps) {
   const setJsonLoaded = (json: string, parsed: ChecklistConfig[]) => {
     setInputJson(json);
     setParsedConfig(parsed);
+  };
+
+  const setMediaFiles = (files: Record<string, Blob>) => {
+    setMediaFilesState(files);
+  };
+
+  const setIsZipFile = (isZip: boolean) => {
+    setIsZipFileState(isZip);
   };
 
   const setEntitySelected = (entity: SelectedEntity) => {
@@ -158,6 +172,9 @@ export function AppProvider({ children }: AppProviderProps) {
     setSelectedEntities([]);
     setDuplicationConfig(null);
     setModifiedConfig(null);
+    setModifiedConfig(null);
+    setMediaFilesState({});
+    setIsZipFileState(false);
   };
 
   const duplicateMore = () => {
@@ -176,6 +193,8 @@ export function AppProvider({ children }: AppProviderProps) {
     selectedEntities,
     duplicationConfig,
     modifiedConfig,
+    mediaFiles,
+    isZipFile,
 
     // Navigation Actions
     goToStep,
@@ -203,6 +222,8 @@ export function AppProvider({ children }: AppProviderProps) {
     setSelectedEntities,
     setDuplicationConfig,
     setModifiedConfig,
+    setMediaFiles,
+    setIsZipFile,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -231,6 +252,8 @@ export function useAppState() {
     selectedEntities: context.selectedEntities,
     duplicationConfig: context.duplicationConfig,
     modifiedConfig: context.modifiedConfig,
+    mediaFiles: context.mediaFiles,
+    isZipFile: context.isZipFile,
   };
 }
 
@@ -259,5 +282,7 @@ export function useAppActions() {
     setSelectedEntities: context.setSelectedEntities,
     setDuplicationConfig: context.setDuplicationConfig,
     setModifiedConfig: context.setModifiedConfig,
+    setMediaFiles: context.setMediaFiles,
+    setIsZipFile: context.setIsZipFile,
   };
 }
